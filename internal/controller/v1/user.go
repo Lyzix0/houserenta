@@ -14,15 +14,27 @@ import (
 	"github.com/potom_pridumaem/internal/usecase"
 )
 
+// register godoc
+// @Summary      Register a user
+// @Description  Creates a new user (landlord, tenant, or admin)
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        input  body      request.Register  true  "Registration data"
+// @Success      201    {object}  entity.User
+// @Failure      400    {object}  response.Error  "invalid request body or role"
+// @Failure      409    {object}  response.Error  "user already exists"
+// @Failure      500    {object}  response.Error  "internal server error"
+// @Router       /auth/register [post]
 func (r *V1) register(ctx fiber.Ctx) error {
 	var body request.Register
 	if err := ctx.Bind().Body(&body); err != nil {
-		r.l.Error("restapi - v1 - register", zap.Error(err))
+		r.l.Error("json register user:", zap.Error(err))
 		return errorResponse(ctx, http.StatusBadRequest, "invalid request body")
 	}
 
 	if err := r.v.Struct(body); err != nil {
-		r.l.Error("restapi - v1 - register", zap.Error(err))
+		r.l.Error("register user:", zap.Error(err))
 		return errorResponse(ctx, http.StatusBadRequest, "invalid request body")
 	}
 
@@ -42,6 +54,18 @@ func (r *V1) register(ctx fiber.Ctx) error {
 	return ctx.Status(http.StatusCreated).JSON(usr)
 }
 
+// login godoc
+// @Summary      Log in a user
+// @Description  Authenticates a user by email and password, and creates a session
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        input  body      request.Login  true  "Login data"
+// @Success      200    {object}  entity.User
+// @Failure      400    {object}  response.Error  "invalid request body"
+// @Failure      401    {object}  response.Error  "invalid credentials"
+// @Failure      500    {object}  response.Error  "internal server error"
+// @Router       /auth/login [post]
 func (r *V1) login(ctx fiber.Ctx) error {
 	var body request.Login
 	if err := ctx.Bind().Body(&body); err != nil {
@@ -86,6 +110,14 @@ func (r *V1) login(ctx fiber.Ctx) error {
 	return ctx.Status(http.StatusOK).JSON(usr)
 }
 
+// logout godoc
+// @Summary      Log out a user
+// @Description  Terminates the current user session
+// @Tags         auth
+// @Produce      json
+// @Success      204  "session terminated successfully"
+// @Failure      500  {object}  response.Error  "internal server error"
+// @Router       /auth/logout [post]
 func (r *V1) logout(ctx fiber.Ctx) error {
 	sess, err := r.sess.Get(ctx)
 	if err != nil {
@@ -102,6 +134,15 @@ func (r *V1) logout(ctx fiber.Ctx) error {
 	return ctx.SendStatus(http.StatusNoContent)
 }
 
+// me godoc
+// @Summary      Current user
+// @Description  Returns the user ID and role from the current session
+// @Tags         auth
+// @Produce      json
+// @Security     CookieAuth
+// @Success      200  {object}  map[string]string
+// @Failure      401  {object}  response.Error  "not authenticated"
+// @Router       /auth/me [get]
 func (r *V1) me(ctx fiber.Ctx) error {
 	userID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
 	role, _ := ctx.Locals(middleware.UserRoleLocalsKey).(string)

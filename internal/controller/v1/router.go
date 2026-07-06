@@ -11,7 +11,10 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewRoutes(apiV1Group fiber.Router, u usecase.User, l *zap.Logger) {
+func NewRoutes(
+	apiV1Group fiber.Router, u usecase.User,
+	p usecase.Property, l *zap.Logger,
+) {
 	sess := session.NewStore(session.Config{
 		IdleTimeout:    24 * time.Hour,
 		CookieHTTPOnly: true,
@@ -19,6 +22,7 @@ func NewRoutes(apiV1Group fiber.Router, u usecase.User, l *zap.Logger) {
 	})
 
 	r := &V1{
+		p:    p,
 		u:    u,
 		l:    l,
 		v:    validator.New(validator.WithRequiredStructEnabled()),
@@ -31,5 +35,10 @@ func NewRoutes(apiV1Group fiber.Router, u usecase.User, l *zap.Logger) {
 		authGroup.Post("/register", r.register)
 		authGroup.Post("/logout", r.logout)
 		authGroup.Get("/me", middleware.AuthRequired(sess), r.me)
+	}
+
+	propertyGroup := apiV1Group.Group("/properties")
+	{
+		propertyGroup.Post("/property", r.createProperty)
 	}
 }

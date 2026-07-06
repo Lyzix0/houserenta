@@ -10,7 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	swaggo "github.com/gofiber/contrib/v3/swaggo"
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -60,6 +62,16 @@ func NewServer(l *zap.Logger) *Server {
 		JSONEncoder:  json.Marshal,
 		JSONDecoder:  json.Unmarshal,
 	})
+
+	// настройка cors
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:5050"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowCredentials: true,
+	}))
+	app.Get("/swagger/*", swaggo.HandlerDefault)
+
 	s.App = app
 
 	return s

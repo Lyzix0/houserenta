@@ -19,6 +19,7 @@ var (
 	cardRegex  = regexp.MustCompile(`^[0-9]{16}$`)
 )
 
+// @Description Основная модель пользователя: арендодатель, арендатор или администратор.
 type User struct {
 	ID           string  `json:"id"`
 	Name         string  `json:"name"`
