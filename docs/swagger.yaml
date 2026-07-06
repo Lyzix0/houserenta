@@ -1,9 +1,306 @@
 basePath: /v1
-host: localhost:5050
+definitions:
+  entity.Property:
+    properties:
+      apartment:
+        type: string
+      balance:
+        type: number
+      city:
+        type: string
+      coordinates:
+        type: string
+      country:
+        type: string
+      el1_tariff:
+        type: number
+      el2_tariff:
+        type: number
+      gvs_tariff:
+        type: number
+      house:
+        type: string
+      hvs_tariff:
+        type: number
+      id:
+        type: string
+      landlord_id:
+        type: string
+      name:
+        type: string
+      region:
+        type: string
+      street:
+        type: string
+    type: object
+  entity.Role:
+    enum:
+    - landlord
+    - tenant
+    - admin
+    type: string
+    x-enum-varnames:
+    - RoleLandlord
+    - RoleTenant
+    - RoleAdmin
+  entity.User:
+    description: 'Основная модель пользователя: арендодатель, арендатор или администратор.'
+    properties:
+      document:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      payment_card:
+        type: string
+      phone:
+        type: string
+      role:
+        $ref: '#/definitions/entity.Role'
+    type: object
+  request.Login:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  request.Property:
+    properties:
+      apartment:
+        type: string
+      city:
+        type: string
+      coordinates:
+        type: string
+      country:
+        type: string
+      el1_tariff:
+        type: number
+      el2_tariff:
+        type: number
+      gvs_tariff:
+        type: number
+      house:
+        type: string
+      hvs_tariff:
+        type: number
+      landlord_id:
+        type: string
+      name:
+        type: string
+      region:
+        type: string
+      street:
+        type: string
+    required:
+    - apartment
+    - city
+    - coordinates
+    - el1_tariff
+    - gvs_tariff
+    - house
+    - hvs_tariff
+    - landlord_id
+    - name
+    - region
+    - street
+    type: object
+  request.Register:
+    properties:
+      document:
+        type: string
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        minLength: 6
+        type: string
+      payment_card:
+        type: string
+      phone:
+        type: string
+      role:
+        enum:
+        - landlord
+        - tenant
+        - admin
+        type: string
+    required:
+    - document
+    - email
+    - name
+    - password
+    - phone
+    - role
+    type: object
+  response.Error:
+    description: Стандартный формат ошибки API
+    properties:
+      error:
+        type: string
+    type: object
 info:
   contact: {}
-  description: API для управления объектами недвижимости и арендаторами
+  description: API for managing rental properties, landlords, and tenants
   title: Potom Pridumaem API
   version: "1.0"
-paths: {}
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user by email and password, and creates a session
+      parameters:
+      - description: Login data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.Login'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.User'
+        "400":
+          description: invalid request body
+          schema:
+            $ref: '#/definitions/response.Error'
+        "401":
+          description: invalid credentials
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      summary: Log in a user
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Terminates the current user session
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: session terminated successfully
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      summary: Log out a user
+      tags:
+      - auth
+  /auth/me:
+    get:
+      description: Returns the user ID and role from the current session
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: not authenticated
+          schema:
+            $ref: '#/definitions/response.Error'
+      security:
+      - CookieAuth: []
+      summary: Current user
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user (landlord, tenant, or admin)
+      parameters:
+      - description: Registration data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.Register'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/entity.User'
+        "400":
+          description: invalid request body or role
+          schema:
+            $ref: '#/definitions/response.Error'
+        "409":
+          description: user already exists
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      summary: Register a user
+      tags:
+      - auth
+  /properties/property:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new rental property for a landlord
+      parameters:
+      - description: Property data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.Property'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/entity.Property'
+        "400":
+          description: invalid request body
+          schema:
+            $ref: '#/definitions/response.Error'
+        "404":
+          description: landlord not found
+          schema:
+            $ref: '#/definitions/response.Error'
+        "409":
+          description: property already exists
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      summary: Create a property
+      tags:
+      - properties
+securityDefinitions:
+  CookieAuth:
+    description: Session cookie set on successful login
+    in: cookie
+    name: session_id
+    type: apiKey
 swagger: "2.0"
