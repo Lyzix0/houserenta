@@ -240,49 +240,64 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "apartment": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "45"
                 },
                 "balance": {
-                    "type": "number"
+                    "type": "number",
+                    "example": 1250.75
                 },
                 "city": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Moscow"
                 },
                 "coordinates": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "55.751244,37.618423"
                 },
                 "country": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Russia"
                 },
                 "el1_tariff": {
-                    "type": "number"
+                    "type": "number",
+                    "example": 5.7
                 },
                 "el2_tariff": {
-                    "type": "number"
+                    "type": "number",
+                    "example": 4.9
                 },
                 "gvs_tariff": {
-                    "type": "number"
+                    "type": "number",
+                    "example": 189.5
                 },
                 "house": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "12"
                 },
                 "hvs_tariff": {
-                    "type": "number"
+                    "type": "number",
+                    "example": 45.2
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "7c9e6b4a-4321-4a1b-8def-abcdef123456"
                 },
                 "landlord_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "3f7e2b1a-1234-4c56-9abc-1234567890ab"
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Sunny Apartment"
                 },
                 "region": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Moscow"
                 },
                 "street": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Tverskaya"
                 }
             }
         },
@@ -304,25 +319,36 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "document": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "4510 123456"
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "ivan.petrov@example.com"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "3f7e2b1a-1234-4c56-9abc-1234567890ab"
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Ivan Petrov"
                 },
                 "payment_card": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "1234567812345678"
                 },
                 "phone": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "+79161234567"
                 },
                 "role": {
-                    "$ref": "#/definitions/entity.Role"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/entity.Role"
+                        }
+                    ],
+                    "example": "landlord"
                 }
             }
         },
@@ -334,10 +360,12 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "ivan.petrov@example.com"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "strongPass123"
                 }
             }
         },
@@ -358,43 +386,56 @@ const docTemplate = `{
             ],
             "properties": {
                 "apartment": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "45"
                 },
                 "city": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Moscow"
                 },
                 "coordinates": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "55.751244,37.618423"
                 },
                 "country": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Russia"
                 },
                 "el1_tariff": {
-                    "type": "number"
+                    "type": "number",
+                    "example": 5.7
                 },
                 "el2_tariff": {
-                    "type": "number"
+                    "type": "number",
+                    "example": 4.9
                 },
                 "gvs_tariff": {
-                    "type": "number"
+                    "type": "number",
+                    "example": 189.5
                 },
                 "house": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "12"
                 },
                 "hvs_tariff": {
-                    "type": "number"
+                    "type": "number",
+                    "example": 45.2
                 },
                 "landlord_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "3f7e2b1a-1234-4c56-9abc-1234567890ab"
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Sunny Apartment"
                 },
                 "region": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Moscow"
                 },
                 "street": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Tverskaya"
                 }
             }
         },
@@ -410,25 +451,31 @@ const docTemplate = `{
             ],
             "properties": {
                 "document": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "4510 123456"
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "ivan.petrov@example.com"
                 },
                 "name": {
                     "type": "string",
                     "maxLength": 100,
-                    "minLength": 2
+                    "minLength": 2,
+                    "example": "Ivan Petrov"
                 },
                 "password": {
                     "type": "string",
-                    "minLength": 6
+                    "minLength": 6,
+                    "example": "strongPass123"
                 },
                 "payment_card": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "1234567812345678"
                 },
                 "phone": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "+79161234567"
                 },
                 "role": {
                     "type": "string",
@@ -436,7 +483,8 @@ const docTemplate = `{
                         "landlord",
                         "tenant",
                         "admin"
-                    ]
+                    ],
+                    "example": "landlord"
                 }
             }
         },
@@ -445,7 +493,8 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "error": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "invalid request body"
                 }
             }
         }

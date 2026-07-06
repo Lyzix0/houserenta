@@ -21,14 +21,14 @@ var (
 
 // @Description Основная модель пользователя: арендодатель, арендатор или администратор.
 type User struct {
-	ID           string  `json:"id"`
-	Name         string  `json:"name"`
-	Email        string  `json:"email"`
+	ID           string  `json:"id" example:"3f7e2b1a-1234-4c56-9abc-1234567890ab"`
+	Name         string  `json:"name" example:"Ivan Petrov"`
+	Email        string  `json:"email" example:"ivan.petrov@example.com"`
 	PasswordHash string  `json:"-"`
-	Role         Role    `json:"role"`
-	Document     string  `json:"document"`
-	Phone        string  `json:"phone"`
-	PaymentCard  *string `json:"payment_card,omitempty"`
+	Role         Role    `json:"role" example:"landlord"`
+	Document     string  `json:"document" example:"4510 123456"`
+	Phone        string  `json:"phone" example:"+79161234567"`
+	PaymentCard  *string `json:"payment_card,omitempty" example:"1234567812345678"`
 }
 
 // валидация бизнес-логики

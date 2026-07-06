@@ -15,7 +15,7 @@ services:
       - LOGGER_LEVEL=${LOGGER_LEVEL}
       - TIME_ZONE=${TIME_ZONE}
       
-      - POSTGRES_HOST=app-postgres
+      - POSTGRES_HOST=app-env-postgres
       - LOGGER_FOLDER=/app/out/logs
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     volumes:

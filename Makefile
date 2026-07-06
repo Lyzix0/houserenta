@@ -46,6 +46,7 @@ migrate-action:
 app-run:
 	@export LOGGER_FOLDER=${PROJECT_ROOT}/out/logs && \
 	export POSTGRES_HOST=localhost && \
+	export POSTGRES_PORT=5400 && \
 	go mod tidy && \
 	go run ${PROJECT_ROOT}/cmd/app/main.go
 

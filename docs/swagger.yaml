@@ -3,34 +3,49 @@ definitions:
   entity.Property:
     properties:
       apartment:
+        example: "45"
         type: string
       balance:
+        example: 1250.75
         type: number
       city:
+        example: Moscow
         type: string
       coordinates:
+        example: 55.751244,37.618423
         type: string
       country:
+        example: Russia
         type: string
       el1_tariff:
+        example: 5.7
         type: number
       el2_tariff:
+        example: 4.9
         type: number
       gvs_tariff:
+        example: 189.5
         type: number
       house:
+        example: "12"
         type: string
       hvs_tariff:
+        example: 45.2
         type: number
       id:
+        example: 7c9e6b4a-4321-4a1b-8def-abcdef123456
         type: string
       landlord_id:
+        example: 3f7e2b1a-1234-4c56-9abc-1234567890ab
         type: string
       name:
+        example: Sunny Apartment
         type: string
       region:
+        example: Moscow
         type: string
       street:
+        example: Tverskaya
         type: string
     type: object
   entity.Role:
@@ -47,25 +62,35 @@ definitions:
     description: 'Основная модель пользователя: арендодатель, арендатор или администратор.'
     properties:
       document:
+        example: 4510 123456
         type: string
       email:
+        example: ivan.petrov@example.com
         type: string
       id:
+        example: 3f7e2b1a-1234-4c56-9abc-1234567890ab
         type: string
       name:
+        example: Ivan Petrov
         type: string
       payment_card:
+        example: "1234567812345678"
         type: string
       phone:
+        example: "+79161234567"
         type: string
       role:
-        $ref: '#/definitions/entity.Role'
+        allOf:
+        - $ref: '#/definitions/entity.Role'
+        example: landlord
     type: object
   request.Login:
     properties:
       email:
+        example: ivan.petrov@example.com
         type: string
       password:
+        example: strongPass123
         type: string
     required:
     - email
@@ -74,30 +99,43 @@ definitions:
   request.Property:
     properties:
       apartment:
+        example: "45"
         type: string
       city:
+        example: Moscow
         type: string
       coordinates:
+        example: 55.751244,37.618423
         type: string
       country:
+        example: Russia
         type: string
       el1_tariff:
+        example: 5.7
         type: number
       el2_tariff:
+        example: 4.9
         type: number
       gvs_tariff:
+        example: 189.5
         type: number
       house:
+        example: "12"
         type: string
       hvs_tariff:
+        example: 45.2
         type: number
       landlord_id:
+        example: 3f7e2b1a-1234-4c56-9abc-1234567890ab
         type: string
       name:
+        example: Sunny Apartment
         type: string
       region:
+        example: Moscow
         type: string
       street:
+        example: Tverskaya
         type: string
     required:
     - apartment
@@ -115,25 +153,32 @@ definitions:
   request.Register:
     properties:
       document:
+        example: 4510 123456
         type: string
       email:
+        example: ivan.petrov@example.com
         type: string
       name:
+        example: Ivan Petrov
         maxLength: 100
         minLength: 2
         type: string
       password:
+        example: strongPass123
         minLength: 6
         type: string
       payment_card:
+        example: "1234567812345678"
         type: string
       phone:
+        example: "+79161234567"
         type: string
       role:
         enum:
         - landlord
         - tenant
         - admin
+        example: landlord
         type: string
     required:
     - document
@@ -147,6 +192,7 @@ definitions:
     description: Стандартный формат ошибки API
     properties:
       error:
+        example: invalid request body
         type: string
     type: object
 info:
