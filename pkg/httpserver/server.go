@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	swaggo "github.com/gofiber/contrib/v3/swaggo"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"go.uber.org/zap"
@@ -69,6 +70,7 @@ func NewServer(l *zap.Logger) *Server {
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,
 	}))
+	app.Get("/swagger/*", swaggo.HandlerDefault)
 
 	s.App = app
 

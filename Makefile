@@ -58,3 +58,9 @@ logs-cleanup:
 
 app-deploy:
 	@docker compose up -d --build renta-app
+
+swagger-gen:
+	@swag init -g cmd/app/main.go -o docs
+	
+swagger-build:
+	@docker compose build --no-cache swagger

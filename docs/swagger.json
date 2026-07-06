@@ -1,0 +1,12 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API для управления объектами недвижимости и арендаторами",
+        "title": "Potom Pridumaem API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:5050",
+    "basePath": "/v1",
+    "paths": {}
+}

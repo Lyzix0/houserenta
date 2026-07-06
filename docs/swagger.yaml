@@ -1,0 +1,9 @@
+basePath: /v1
+host: localhost:5050
+info:
+  contact: {}
+  description: API для управления объектами недвижимости и арендаторами
+  title: Potom Pridumaem API
+  version: "1.0"
+paths: {}
+swagger: "2.0"
