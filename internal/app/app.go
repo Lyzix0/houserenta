@@ -6,6 +6,7 @@ import (
 	"github.com/potom_pridumaem/config"
 	restapi "github.com/potom_pridumaem/internal/controller"
 	"github.com/potom_pridumaem/internal/repo/persistent"
+	"github.com/potom_pridumaem/internal/usecase/property"
 	"github.com/potom_pridumaem/internal/usecase/user"
 	"github.com/potom_pridumaem/pkg/httpserver"
 	"github.com/potom_pridumaem/pkg/logger"
@@ -13,13 +14,17 @@ import (
 )
 
 type useCases struct {
-	user *user.UseCase
+	user     *user.UseCase
+	property *property.UseCase
 }
 
 func initUseCases(pg *postgres.Postgres) useCases {
 	userRepo := persistent.NewUserRepo(pg)
+	propertyRepo := persistent.NewPropertyRepo(pg)
+
 	return useCases{
-		user: user.New(userRepo),
+		user:     user.New(userRepo),
+		property: property.New(propertyRepo),
 	}
 }
 
@@ -39,7 +44,7 @@ func Run(cfg *config.Config) {
 
 	httpServer := httpserver.NewServer(lgr.Logger)
 
-	restapi.NewRouter(httpServer.App, cfg, uc.user, lgr.Logger)
+	restapi.NewRouter(httpServer.App, cfg, uc.user, uc.property, lgr.Logger)
 
 	httpServer.Start()
 	httpServer.WaitForShutdown(*lgr.Logger)

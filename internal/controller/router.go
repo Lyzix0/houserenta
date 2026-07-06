@@ -16,6 +16,7 @@ func NewRouter(
 	app *fiber.App,
 	cfg *config.Config,
 	u usecase.User,
+	p usecase.Property,
 	l *zap.Logger,
 ) {
 	app.Use(middleware.Logger(l))
@@ -27,5 +28,5 @@ func NewRouter(
 	})
 
 	apiV1Group := app.Group("/v1")
-	v1.NewRoutes(apiV1Group, u, l)
+	v1.NewRoutes(apiV1Group, u, p, l)
 }

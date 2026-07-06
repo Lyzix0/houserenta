@@ -17,12 +17,12 @@ import (
 func (r *V1) register(ctx fiber.Ctx) error {
 	var body request.Register
 	if err := ctx.Bind().Body(&body); err != nil {
-		r.l.Error("restapi - v1 - register", zap.Error(err))
+		r.l.Error("json register user:", zap.Error(err))
 		return errorResponse(ctx, http.StatusBadRequest, "invalid request body")
 	}
 
 	if err := r.v.Struct(body); err != nil {
-		r.l.Error("restapi - v1 - register", zap.Error(err))
+		r.l.Error("register user:", zap.Error(err))
 		return errorResponse(ctx, http.StatusBadRequest, "invalid request body")
 	}
 
