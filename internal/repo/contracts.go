@@ -20,6 +20,7 @@ type (
 		GetByID(ctx context.Context, id string) (entity.Property, error)
 		Update(ctx context.Context, property entity.Property) error
 		Delete(ctx context.Context, id string) error
+		AddBalance(ctx context.Context, propertyID string, amount float64) error
 	}
 
 	LeaseRepo interface {
@@ -31,13 +32,16 @@ type (
 
 	ReadingRepo interface {
 		GetByPropertyID(ctx context.Context, propertyID string) ([]entity.Reading, error)
+		Store(ctx context.Context, reading entity.Reading) error
 	}
 
 	BillRepo interface {
 		GetByPropertyID(ctx context.Context, propertyID string) ([]entity.Bill, error)
+		UpdateStatus(ctx context.Context, billID, propertyID, status string) error
 	}
 
 	CustomNextItemRepo interface {
 		GetByPropertyID(ctx context.Context, propertyID string) ([]entity.CustomNextItem, error)
+		Store(ctx context.Context, item entity.CustomNextItem) error
 	}
 )

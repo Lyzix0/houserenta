@@ -50,3 +50,23 @@ func (r *ReadingRepo) GetByPropertyID(ctx context.Context, propertyID string) ([
 
 	return readings, nil
 }
+
+func (r *ReadingRepo) Store(ctx context.Context, reading entity.Reading) error {
+	sql, args, err := r.Builder.
+		Insert("app.readings").
+		Columns("id", "property_id", "date", "gvs", "hvs", "el1", "el2", "is_accounted").
+		Values(
+			reading.ID, reading.PropertyID, reading.Date, reading.Gvs, reading.Hvs,
+			reading.El1, reading.El2, reading.IsAccounted,
+		).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("ReadingRepo - Store - r.Builder: %w", err)
+	}
+
+	if _, err := r.Pool.Exec(ctx, sql, args...); err != nil {
+		return fmt.Errorf("ReadingRepo - Store - r.Pool.Exec: %w", err)
+	}
+
+	return nil
+}

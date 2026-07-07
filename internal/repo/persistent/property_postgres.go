@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	entity "github.com/potom_pridumaem/internal/entity/users"
@@ -143,6 +144,28 @@ func (r *PropertyRepo) Update(ctx context.Context, prop entity.Property) error {
 	tag, err := r.Pool.Exec(ctx, sql, args...)
 	if err != nil {
 		return fmt.Errorf("PropertyRepo - Update - r.Pool.Exec: %w", err)
+	}
+
+	if tag.RowsAffected() == 0 {
+		return repo.ErrPropertyNotFound
+	}
+
+	return nil
+}
+
+func (r *PropertyRepo) AddBalance(ctx context.Context, propertyID string, amount float64) error {
+	sql, args, err := r.Builder.
+		Update("app.properties").
+		Set("balance", squirrel.Expr("balance + ?", amount)).
+		Where("id = ?", propertyID).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("PropertyRepo - AddBalance - r.Builder: %w", err)
+	}
+
+	tag, err := r.Pool.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("PropertyRepo - AddBalance - r.Pool.Exec: %w", err)
 	}
 
 	if tag.RowsAffected() == 0 {

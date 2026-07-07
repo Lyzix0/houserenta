@@ -47,3 +47,20 @@ func (r *CustomNextItemRepo) GetByPropertyID(ctx context.Context, propertyID str
 
 	return items, nil
 }
+
+func (r *CustomNextItemRepo) Store(ctx context.Context, item entity.CustomNextItem) error {
+	sql, args, err := r.Builder.
+		Insert("app.custom_next_items").
+		Columns("id", "property_id", "description", "amount").
+		Values(item.ID, item.PropertyID, item.Description, item.Amount).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("CustomNextItemRepo - Store - r.Builder: %w", err)
+	}
+
+	if _, err := r.Pool.Exec(ctx, sql, args...); err != nil {
+		return fmt.Errorf("CustomNextItemRepo - Store - r.Pool.Exec: %w", err)
+	}
+
+	return nil
+}

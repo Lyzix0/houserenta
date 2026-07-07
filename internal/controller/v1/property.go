@@ -254,3 +254,133 @@ func (r *V1) deleteProperty(ctx fiber.Ctx) error {
 
 	return ctx.Status(http.StatusOK).JSON(fiber.Map{"ok": true})
 }
+
+// createReading godoc
+// @Summary      Submit a meter reading
+// @Description  Protected. Records a new meter reading for the property, submitted by the tenant currently leasing it or by the owning landlord.
+// @Tags         properties
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Param        id     path      string           true  "Property ID"
+// @Param        input  body      request.Reading  true  "Meter reading"
+// @Success      200    {object}  map[string]bool
+// @Failure      400    {object}  response.Error  "invalid request body"
+// @Failure      401    {object}  response.Error  "not authenticated"
+// @Failure      404    {object}  response.Error  "property not found"
+// @Failure      500    {object}  response.Error  "internal server error"
+// @Router       /properties/{id}/readings [post]
+func (r *V1) createReading(ctx fiber.Ctx) error {
+	var body request.Reading
+	if err := ctx.Bind().Body(&body); err != nil {
+		r.l.Error("create reading json:", zap.Error(err))
+		return errorResponse(ctx, http.StatusBadRequest, "invalid body")
+	}
+
+	if err := r.v.Struct(body); err != nil {
+		r.l.Error("validate reading:", zap.Error(err))
+		return errorResponse(ctx, http.StatusBadRequest, "invalid body")
+	}
+
+	userID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
+	role, _ := ctx.Locals(middleware.UserRoleLocalsKey).(string)
+
+	if err := r.p.CreateReading(ctx.Context(), ctx.Params("id"), userID, entity.Role(role), body); err != nil {
+		switch {
+		case errors.Is(err, repo.ErrPropertyNotFound):
+			return errorResponse(ctx, http.StatusNotFound, "property not found")
+		default:
+			r.l.Error("create reading:", zap.Error(err))
+			return errorResponse(ctx, http.StatusInternalServerError, "failed to submit reading")
+		}
+	}
+
+	return ctx.Status(http.StatusOK).JSON(fiber.Map{"ok": true})
+}
+
+// pay godoc
+// @Summary      Make a payment
+// @Description  Protected. Either settles a specific bill (status becomes "paid") when billId is provided, or tops up the property's general balance otherwise.
+// @Tags         properties
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Param        id     path      string           true  "Property ID"
+// @Param        input  body      request.Payment  true  "Payment data"
+// @Success      200    {object}  map[string]bool
+// @Failure      400    {object}  response.Error  "invalid request body"
+// @Failure      401    {object}  response.Error  "not authenticated"
+// @Failure      404    {object}  response.Error  "property not found, or bill not found"
+// @Failure      500    {object}  response.Error  "internal server error"
+// @Router       /properties/{id}/pay [post]
+func (r *V1) pay(ctx fiber.Ctx) error {
+	var body request.Payment
+	if err := ctx.Bind().Body(&body); err != nil {
+		r.l.Error("pay json:", zap.Error(err))
+		return errorResponse(ctx, http.StatusBadRequest, "invalid body")
+	}
+
+	if err := r.v.Struct(body); err != nil {
+		r.l.Error("validate payment:", zap.Error(err))
+		return errorResponse(ctx, http.StatusBadRequest, "invalid body")
+	}
+
+	userID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
+	role, _ := ctx.Locals(middleware.UserRoleLocalsKey).(string)
+
+	if err := r.p.Pay(ctx.Context(), ctx.Params("id"), userID, entity.Role(role), body); err != nil {
+		switch {
+		case errors.Is(err, repo.ErrPropertyNotFound):
+			return errorResponse(ctx, http.StatusNotFound, "property not found")
+		case errors.Is(err, repo.ErrBillNotFound):
+			return errorResponse(ctx, http.StatusNotFound, "bill not found")
+		default:
+			r.l.Error("pay:", zap.Error(err))
+			return errorResponse(ctx, http.StatusInternalServerError, "failed to process payment")
+		}
+	}
+
+	return ctx.Status(http.StatusOK).JSON(fiber.Map{"ok": true})
+}
+
+// createCustomItem godoc
+// @Summary      Add a one-off charge
+// @Description  Protected, Landlord only. Adds a one-off charge (e.g. cleaning, lock replacement) that will be folded into the property's next automatic bill.
+// @Tags         properties
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Param        id     path      string              true  "Property ID"
+// @Param        input  body      request.CustomItem  true  "Charge data"
+// @Success      200    {object}  map[string]bool
+// @Failure      400    {object}  response.Error  "invalid request body"
+// @Failure      401    {object}  response.Error  "not authenticated"
+// @Failure      404    {object}  response.Error  "property not found"
+// @Failure      500    {object}  response.Error  "internal server error"
+// @Router       /properties/{id}/custom-item [post]
+func (r *V1) createCustomItem(ctx fiber.Ctx) error {
+	var body request.CustomItem
+	if err := ctx.Bind().Body(&body); err != nil {
+		r.l.Error("create custom item json:", zap.Error(err))
+		return errorResponse(ctx, http.StatusBadRequest, "invalid body")
+	}
+
+	if err := r.v.Struct(body); err != nil {
+		r.l.Error("validate custom item:", zap.Error(err))
+		return errorResponse(ctx, http.StatusBadRequest, "invalid body")
+	}
+
+	landlordID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
+
+	if err := r.p.CreateCustomItem(ctx.Context(), ctx.Params("id"), landlordID, body); err != nil {
+		switch {
+		case errors.Is(err, repo.ErrPropertyNotFound):
+			return errorResponse(ctx, http.StatusNotFound, "property not found")
+		default:
+			r.l.Error("create custom item:", zap.Error(err))
+			return errorResponse(ctx, http.StatusInternalServerError, "failed to create custom item")
+		}
+	}
+
+	return ctx.Status(http.StatusOK).JSON(fiber.Map{"ok": true})
+}

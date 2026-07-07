@@ -249,6 +249,18 @@ definitions:
         example: prop-z8y7x6w
         type: string
     type: object
+  request.CustomItem:
+    properties:
+      amount:
+        example: 2500
+        type: number
+      description:
+        example: Замена смесителя на кухне
+        type: string
+    required:
+    - amount
+    - description
+    type: object
   request.Lease:
     properties:
       monthsOfRent:
@@ -288,6 +300,17 @@ definitions:
     required:
     - email
     - password
+    type: object
+  request.Payment:
+    properties:
+      amount:
+        example: 35000
+        type: number
+      billId:
+        example: bill-999
+        type: string
+    required:
+    - amount
     type: object
   request.Profile:
     properties:
@@ -362,6 +385,25 @@ definitions:
     - name
     - region
     - street
+    type: object
+  request.Reading:
+    properties:
+      el1:
+        example: 395.5
+        type: number
+      el2:
+        example: 110.2
+        type: number
+      gvs:
+        example: 15.2
+        type: number
+      hvs:
+        example: 29.8
+        type: number
+    required:
+    - el1
+    - gvs
+    - hvs
     type: object
   request.Register:
     properties:
@@ -810,6 +852,54 @@ paths:
       summary: Update a property
       tags:
       - properties
+  /properties/{id}/custom-item:
+    post:
+      consumes:
+      - application/json
+      description: Protected, Landlord only. Adds a one-off charge (e.g. cleaning,
+        lock replacement) that will be folded into the property's next automatic bill.
+      parameters:
+      - description: Property ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Charge data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.CustomItem'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: invalid request body
+          schema:
+            $ref: '#/definitions/response.Error'
+        "401":
+          description: not authenticated
+          schema:
+            $ref: '#/definitions/response.Error'
+        "404":
+          description: property not found
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      security:
+      - CookieAuth: []
+      summary: Add a one-off charge
+      tags:
+      - properties
   /properties/{id}/lease:
     delete:
       description: 'Protected, Landlord only. Terminates the property''s lease and
@@ -895,6 +985,102 @@ paths:
       security:
       - CookieAuth: []
       summary: Move a tenant in
+      tags:
+      - properties
+  /properties/{id}/pay:
+    post:
+      consumes:
+      - application/json
+      description: Protected. Either settles a specific bill (status becomes "paid")
+        when billId is provided, or tops up the property's general balance otherwise.
+      parameters:
+      - description: Property ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Payment data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.Payment'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: invalid request body
+          schema:
+            $ref: '#/definitions/response.Error'
+        "401":
+          description: not authenticated
+          schema:
+            $ref: '#/definitions/response.Error'
+        "404":
+          description: property not found, or bill not found
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      security:
+      - CookieAuth: []
+      summary: Make a payment
+      tags:
+      - properties
+  /properties/{id}/readings:
+    post:
+      consumes:
+      - application/json
+      description: Protected. Records a new meter reading for the property, submitted
+        by the tenant currently leasing it or by the owning landlord.
+      parameters:
+      - description: Property ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Meter reading
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.Reading'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: invalid request body
+          schema:
+            $ref: '#/definitions/response.Error'
+        "401":
+          description: not authenticated
+          schema:
+            $ref: '#/definitions/response.Error'
+        "404":
+          description: property not found
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      security:
+      - CookieAuth: []
+      summary: Submit a meter reading
       tags:
       - properties
 securityDefinitions:

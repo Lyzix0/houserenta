@@ -6,6 +6,7 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	entity "github.com/potom_pridumaem/internal/entity/users"
+	"github.com/potom_pridumaem/internal/repo"
 	"github.com/potom_pridumaem/pkg/postgres"
 )
 
@@ -85,4 +86,26 @@ func (r *BillRepo) GetByPropertyID(ctx context.Context, propertyID string) ([]en
 	}
 
 	return bills, nil
+}
+
+func (r *BillRepo) UpdateStatus(ctx context.Context, billID, propertyID, status string) error {
+	sql, args, err := r.Builder.
+		Update("app.bills").
+		Set("status", status).
+		Where(squirrel.Eq{"id": billID, "property_id": propertyID}).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("BillRepo - UpdateStatus - r.Builder: %w", err)
+	}
+
+	tag, err := r.Pool.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("BillRepo - UpdateStatus - r.Pool.Exec: %w", err)
+	}
+
+	if tag.RowsAffected() == 0 {
+		return repo.ErrBillNotFound
+	}
+
+	return nil
 }
