@@ -9,6 +9,7 @@ import (
 
 	"github.com/potom_pridumaem/internal/controller/middleware"
 	"github.com/potom_pridumaem/internal/controller/v1/request"
+	"github.com/potom_pridumaem/internal/controller/v1/response"
 	entity "github.com/potom_pridumaem/internal/entity/users"
 	"github.com/potom_pridumaem/internal/repo"
 	"github.com/potom_pridumaem/internal/usecase"
@@ -135,20 +136,32 @@ func (r *V1) logout(ctx fiber.Ctx) error {
 }
 
 // me godoc
-// @Summary      Current user
-// @Description  Returns the user ID and role from the current session
+// @Summary      Current session
+// @Description  Protected. Returns the full profile of the authenticated user for the current session, including the linked property when the caller is a tenant. Per business requirements this should also trigger an autobilling check; note: autobilling is not implemented yet in this API version, so only profile data is returned for now.
 // @Tags         auth
 // @Produce      json
 // @Security     CookieAuth
-// @Success      200  {object}  map[string]string
+// @Success      200  {object}  response.Me
 // @Failure      401  {object}  response.Error  "not authenticated"
+// @Failure      500  {object}  response.Error  "internal server error"
 // @Router       /auth/me [get]
 func (r *V1) me(ctx fiber.Ctx) error {
 	userID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
-	role, _ := ctx.Locals(middleware.UserRoleLocalsKey).(string)
 
-	return ctx.Status(http.StatusOK).JSON(fiber.Map{
-		"id":   userID,
-		"role": role,
+	profile, err := r.u.Me(ctx.Context(), userID)
+	if err != nil {
+		r.l.Error("restapi - v1 - me", zap.Error(err))
+		return errorResponse(ctx, http.StatusInternalServerError, "internal server error")
+	}
+
+	return ctx.Status(http.StatusOK).JSON(response.Me{
+		ID:               profile.User.ID,
+		Name:             profile.User.Name,
+		Email:            profile.User.Email,
+		Role:             string(profile.User.Role),
+		Document:         profile.User.Document,
+		Phone:            profile.User.Phone,
+		PaymentCard:      profile.User.PaymentCard,
+		TenantPropertyID: profile.TenantPropertyID,
 	})
 }

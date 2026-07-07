@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/potom_pridumaem/internal/controller/v1/request"
+	"github.com/potom_pridumaem/internal/controller/v1/response"
 	entity "github.com/potom_pridumaem/internal/entity/users"
 	"github.com/potom_pridumaem/internal/repo"
 	"github.com/potom_pridumaem/internal/usecase"
@@ -164,10 +165,22 @@ func TestMe(t *testing.T) {
 		}
 	})
 
-	t.Run("authenticated", func(t *testing.T) {
+	t.Run("authenticated landlord", func(t *testing.T) {
 		app := newTestApp(&userUseCaseMock{
 			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
 				return entity.User{ID: "user-1", Email: email, Role: entity.RoleLandlord}, nil
+			},
+			meFn: func(_ context.Context, userID string) (usecase.UserProfile, error) {
+				return usecase.UserProfile{
+					User: entity.User{
+						ID:       userID,
+						Name:     "Ivan Petrov",
+						Email:    "john@example.com",
+						Role:     entity.RoleLandlord,
+						Document: "1234567890",
+						Phone:    "+79991234567",
+					},
+				}, nil
 			},
 		}, &propertyUseCaseMock{})
 
@@ -186,14 +199,80 @@ func TestMe(t *testing.T) {
 			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
 		}
 
-		var body map[string]string
+		var body response.Me
 		decodeJSON(t, resp, &body)
 
-		if body["id"] != "user-1" {
-			t.Fatalf("id = %q, want %q", body["id"], "user-1")
+		if body.ID != "user-1" {
+			t.Fatalf("id = %q, want %q", body.ID, "user-1")
 		}
-		if body["role"] != string(entity.RoleLandlord) {
-			t.Fatalf("role = %q, want %q", body["role"], entity.RoleLandlord)
+		if body.Role != string(entity.RoleLandlord) {
+			t.Fatalf("role = %q, want %q", body.Role, entity.RoleLandlord)
+		}
+		if body.TenantPropertyID != nil {
+			t.Fatalf("tenantPropertyId = %v, want nil", *body.TenantPropertyID)
+		}
+	})
+
+	t.Run("authenticated tenant with lease", func(t *testing.T) {
+		app := newTestApp(&userUseCaseMock{
+			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
+				return entity.User{ID: "tenant-1", Email: email, Role: entity.RoleTenant}, nil
+			},
+			meFn: func(_ context.Context, userID string) (usecase.UserProfile, error) {
+				propertyID := "prop-1"
+				return usecase.UserProfile{
+					User:             entity.User{ID: userID, Role: entity.RoleTenant},
+					TenantPropertyID: &propertyID,
+				}, nil
+			},
+		}, &propertyUseCaseMock{})
+
+		loginResp := doRequest(t, app, http.MethodPost, "/v1/auth/login", request.Login{Email: "tenant@example.com", Password: "password123"})
+		defer loginResp.Body.Close()
+
+		cookie := sessionCookie(loginResp)
+		if cookie == nil {
+			t.Fatal("expected session_id cookie from login")
+		}
+
+		resp := doRequest(t, app, http.MethodGet, "/v1/auth/me", nil, cookie)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+		}
+
+		var body response.Me
+		decodeJSON(t, resp, &body)
+
+		if body.TenantPropertyID == nil || *body.TenantPropertyID != "prop-1" {
+			t.Fatalf("tenantPropertyId = %v, want %q", body.TenantPropertyID, "prop-1")
+		}
+	})
+
+	t.Run("internal error", func(t *testing.T) {
+		app := newTestApp(&userUseCaseMock{
+			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
+				return entity.User{ID: "user-1", Email: email, Role: entity.RoleLandlord}, nil
+			},
+			meFn: func(context.Context, string) (usecase.UserProfile, error) {
+				return usecase.UserProfile{}, errors.New("boom")
+			},
+		}, &propertyUseCaseMock{})
+
+		loginResp := doRequest(t, app, http.MethodPost, "/v1/auth/login", request.Login{Email: "john@example.com", Password: "password123"})
+		defer loginResp.Body.Close()
+
+		cookie := sessionCookie(loginResp)
+		if cookie == nil {
+			t.Fatal("expected session_id cookie from login")
+		}
+
+		resp := doRequest(t, app, http.MethodGet, "/v1/auth/me", nil, cookie)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusInternalServerError {
+			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusInternalServerError)
 		}
 	})
 }

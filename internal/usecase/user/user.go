@@ -14,12 +14,14 @@ import (
 )
 
 type UseCase struct {
-	repo repo.UserRepo
+	repo   repo.UserRepo
+	leases repo.LeaseRepo
 }
 
-func New(r repo.UserRepo) *UseCase {
+func New(r repo.UserRepo, leases repo.LeaseRepo) *UseCase {
 	return &UseCase{
-		repo: r,
+		repo:   r,
+		leases: leases,
 	}
 }
 
@@ -68,4 +70,28 @@ func (uc *UseCase) Login(ctx context.Context, email, password string) (entity.Us
 	}
 
 	return user, nil
+}
+
+func (uc *UseCase) Me(ctx context.Context, userID string) (usecase.UserProfile, error) {
+	usr, err := uc.repo.GetByID(ctx, userID)
+	if err != nil {
+		return usecase.UserProfile{}, fmt.Errorf("UserUseCase - Me - uc.repo.GetByID: %w", err)
+	}
+
+	profile := usecase.UserProfile{User: usr}
+
+	if usr.Role == entity.RoleTenant {
+		lease, err := uc.leases.GetByTenantUserID(ctx, userID)
+		switch {
+		case err == nil:
+			propertyID := lease.PropertyID
+			profile.TenantPropertyID = &propertyID
+		case errors.Is(err, repo.ErrLeaseNotFound):
+			// tenant has no active lease yet: tenantPropertyId stays nil
+		default:
+			return usecase.UserProfile{}, fmt.Errorf("UserUseCase - Me - uc.leases.GetByTenantUserID: %w", err)
+		}
+	}
+
+	return profile, nil
 }

@@ -95,3 +95,38 @@ func (r *UserRepo) GetByEmail(
 
 	return u, nil
 }
+
+func (r *UserRepo) GetByID(
+	ctx context.Context,
+	id string,
+) (entity.User, error) {
+	sql, args, err := r.Builder.
+		Select("id, name, email, password_hash, role, document, phone, payment_card").
+		From("app.users").
+		Where("id = ?", id).
+		ToSql()
+	if err != nil {
+		return entity.User{}, fmt.Errorf("UserRepo - GetByID - r.Builder: %w", err)
+	}
+
+	var u entity.User
+	err = r.Pool.QueryRow(ctx, sql, args...).Scan(
+		&u.ID,
+		&u.Name,
+		&u.Email,
+		&u.PasswordHash,
+		&u.Role,
+		&u.Document,
+		&u.Phone,
+		&u.PaymentCard,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.User{}, repo.ErrUserNotFound
+		}
+		return entity.User{}, fmt.Errorf("UserRepo - GetByID - r.Pool.QueryRow: %w", err)
+	}
+
+	return u, nil
+}

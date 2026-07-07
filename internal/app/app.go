@@ -21,9 +21,10 @@ type useCases struct {
 func initUseCases(pg *postgres.Postgres) useCases {
 	userRepo := persistent.NewUserRepo(pg)
 	propertyRepo := persistent.NewPropertyRepo(pg)
+	leaseRepo := persistent.NewLeaseRepo(pg)
 
 	return useCases{
-		user:     user.New(userRepo),
+		user:     user.New(userRepo, leaseRepo),
 		property: property.New(propertyRepo),
 	}
 }
