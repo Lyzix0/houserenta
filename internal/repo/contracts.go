@@ -25,6 +25,8 @@ type (
 	LeaseRepo interface {
 		GetByTenantUserID(ctx context.Context, tenantUserID string) (entity.Lease, error)
 		GetByPropertyID(ctx context.Context, propertyID string) (entity.Lease, error)
+		Upsert(ctx context.Context, lease entity.Lease) error
+		DeleteByPropertyID(ctx context.Context, propertyID string) error
 	}
 
 	ReadingRepo interface {

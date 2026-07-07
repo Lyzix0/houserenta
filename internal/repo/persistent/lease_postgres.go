@@ -80,3 +80,52 @@ func (r *LeaseRepo) GetByPropertyID(
 
 	return lease, nil
 }
+
+// Upsert creates a lease for the property, or replaces the existing one (keeping its ID)
+// if the property already has an active lease, since app.leases.property_id is unique.
+func (r *LeaseRepo) Upsert(ctx context.Context, lease entity.Lease) error {
+	sql, args, err := r.Builder.
+		Insert("app.leases").
+		Columns(leaseColumns...).
+		Values(
+			lease.ID, lease.PropertyID, lease.TenantUserID, lease.Name, lease.Document, lease.Phone,
+			lease.MonthsOfRent, lease.Price, lease.PaymentDay, lease.ReadingDay, lease.StartDate, lease.EndDate,
+		).
+		Suffix(`ON CONFLICT (property_id) DO UPDATE SET
+			tenant_user_id = EXCLUDED.tenant_user_id,
+			name = EXCLUDED.name,
+			document = EXCLUDED.document,
+			phone = EXCLUDED.phone,
+			months_of_rent = EXCLUDED.months_of_rent,
+			price = EXCLUDED.price,
+			payment_day = EXCLUDED.payment_day,
+			reading_day = EXCLUDED.reading_day,
+			start_date = EXCLUDED.start_date,
+			end_date = EXCLUDED.end_date`).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("LeaseRepo - Upsert - r.Builder: %w", err)
+	}
+
+	if _, err := r.Pool.Exec(ctx, sql, args...); err != nil {
+		return fmt.Errorf("LeaseRepo - Upsert - r.Pool.Exec: %w", err)
+	}
+
+	return nil
+}
+
+func (r *LeaseRepo) DeleteByPropertyID(ctx context.Context, propertyID string) error {
+	sql, args, err := r.Builder.
+		Delete("app.leases").
+		Where("property_id = ?", propertyID).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("LeaseRepo - DeleteByPropertyID - r.Builder: %w", err)
+	}
+
+	if _, err := r.Pool.Exec(ctx, sql, args...); err != nil {
+		return fmt.Errorf("LeaseRepo - DeleteByPropertyID - r.Pool.Exec: %w", err)
+	}
+
+	return nil
+}
