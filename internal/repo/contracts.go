@@ -24,5 +24,18 @@ type (
 
 	LeaseRepo interface {
 		GetByTenantUserID(ctx context.Context, tenantUserID string) (entity.Lease, error)
+		GetByPropertyID(ctx context.Context, propertyID string) (entity.Lease, error)
+	}
+
+	ReadingRepo interface {
+		GetByPropertyID(ctx context.Context, propertyID string) ([]entity.Reading, error)
+	}
+
+	BillRepo interface {
+		GetByPropertyID(ctx context.Context, propertyID string) ([]entity.Bill, error)
+	}
+
+	CustomNextItemRepo interface {
+		GetByPropertyID(ctx context.Context, propertyID string) ([]entity.CustomNextItem, error)
 	}
 )

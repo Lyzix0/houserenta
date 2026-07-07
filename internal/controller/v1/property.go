@@ -7,23 +7,27 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/potom_pridumaem/internal/controller/middleware"
 	"github.com/potom_pridumaem/internal/controller/v1/request"
+	"github.com/potom_pridumaem/internal/controller/v1/response"
+	entity "github.com/potom_pridumaem/internal/entity/users"
 	"github.com/potom_pridumaem/internal/repo"
 	"go.uber.org/zap"
 )
 
 // createProperty godoc
 // @Summary      Create a property
-// @Description  Creates a new rental property for a landlord, registering its address and utility tariffs (hot/cold water, electricity) that will later be used for billing calculations. The new property starts with a zero balance.
+// @Description  Protected, Landlord only. Creates a new rental property owned by the authenticated landlord, registering its address and utility tariffs (hot/cold water, electricity) that will later be used for billing calculations. The new property starts with a zero balance.
 // @Tags         properties
 // @Accept       json
 // @Produce      json
+// @Security     CookieAuth
 // @Param        input  body      request.Property  true  "Property data"
-// @Success      201    {object}  entity.Property
+// @Success      200    {object}  response.PropertySummary
 // @Failure      400    {object}  response.Error  "invalid request body"
+// @Failure      401    {object}  response.Error  "not authenticated"
 // @Failure      404    {object}  response.Error  "landlord not found"
 // @Failure      409    {object}  response.Error  "property already exists"
 // @Failure      500    {object}  response.Error  "internal server error"
-// @Router       /properties/property [post]
+// @Router       /properties [post]
 func (r *V1) createProperty(ctx fiber.Ctx) error {
 	var body request.Property
 	if err := ctx.Bind().Body(&body); err != nil {
@@ -36,7 +40,9 @@ func (r *V1) createProperty(ctx fiber.Ctx) error {
 		return errorResponse(ctx, http.StatusBadRequest, "invalid body")
 	}
 
-	prop, err := r.p.CreateProperty(ctx.Context(), body)
+	landlordID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
+
+	prop, err := r.p.CreateProperty(ctx.Context(), landlordID, body)
 	if err != nil {
 		switch {
 		case errors.Is(err, repo.ErrLandlordNotFound):
@@ -49,23 +55,27 @@ func (r *V1) createProperty(ctx fiber.Ctx) error {
 		}
 	}
 
-	return ctx.Status(http.StatusCreated).JSON(prop)
+	return ctx.Status(http.StatusOK).JSON(response.PropertySummary{
+		ID:   prop.ID,
+		Name: prop.Name,
+	})
 }
 
 // getProperties godoc
 // @Summary      List properties
-// @Description  Returns all properties owned by the currently authenticated user, so a landlord can see their full property portfolio. Only properties the caller owns are returned; other landlords' properties are never exposed.
+// @Description  Protected. Returns the caller's properties with an automatic nested assembly of related entities (meter readings, bills with their line items, upcoming custom charges, lease/tenant info, landlord contact). Landlords see every property they own; tenants see the single property they lease, if any. The "applications" field is always empty: there is no applications/tickets subsystem implemented yet.
 // @Tags         properties
 // @Produce      json
 // @Security     CookieAuth
-// @Success      200  {array}   entity.Property
+// @Success      200  {array}   entity.PropertyDetail
 // @Failure      401  {object}  response.Error  "not authenticated"
 // @Failure      500  {object}  response.Error  "internal server error"
 // @Router       /properties [get]
 func (r *V1) getProperties(ctx fiber.Ctx) error {
-	landlordID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
+	userID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
+	role, _ := ctx.Locals(middleware.UserRoleLocalsKey).(string)
 
-	properties, err := r.p.GetProperties(ctx.Context(), landlordID)
+	properties, err := r.p.GetProperties(ctx.Context(), userID, entity.Role(role))
 	if err != nil {
 		r.l.Error("get properties:", zap.Error(err))
 		return errorResponse(ctx, http.StatusInternalServerError, "failed to get properties")

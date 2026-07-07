@@ -1,5 +1,104 @@
 basePath: /v1
 definitions:
+  entity.Bill:
+    description: Счет на оплату аренды и коммунальных услуг.
+    properties:
+      date:
+        example: "2026-06-25T14:00:00.000Z"
+        type: string
+      due_date:
+        example: "2026-07-05T00:00:00.000Z"
+        type: string
+      id:
+        example: bill-999
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/entity.BillItem'
+        type: array
+      property_id:
+        example: prop-z8y7x6w
+        type: string
+      status:
+        example: unpaid
+        type: string
+      total:
+        example: 35000
+        type: number
+    type: object
+  entity.BillItem:
+    description: Строка начисления в составе счета.
+    properties:
+      amount:
+        example: 35000
+        type: number
+      bill_id:
+        example: bill-999
+        type: string
+      description:
+        example: Аренда за период
+        type: string
+      id:
+        example: item-1
+        type: string
+    type: object
+  entity.CustomNextItem:
+    description: Разовое начисление, которое будет автоматически добавлено в следующий
+      ежемесячный счет.
+    properties:
+      amount:
+        example: 2500
+        type: number
+      description:
+        example: Ремонт сантехники
+        type: string
+      id:
+        example: custom-1
+        type: string
+      property_id:
+        example: prop-z8y7x6w
+        type: string
+    type: object
+  entity.Lease:
+    description: 'Договор аренды: юридическая связь между квартирой и конкретным жильцом.'
+    properties:
+      document:
+        example: Паспорт РФ 4512 № 345678
+        type: string
+      end_date:
+        example: "2026-12-31"
+        type: string
+      id:
+        example: lease-1a2b3c4d
+        type: string
+      months_of_rent:
+        example: 12
+        type: integer
+      name:
+        example: Иванов Иван Иванович
+        type: string
+      payment_day:
+        example: 5
+        type: integer
+      phone:
+        example: "+79991112233"
+        type: string
+      price:
+        example: 45000
+        type: number
+      property_id:
+        example: 7c9e6b4a-4321-4a1b-8def-abcdef123456
+        type: string
+      reading_day:
+        example: 25
+        type: integer
+      start_date:
+        example: "2026-01-01"
+        type: string
+      tenant_user_id:
+        example: user-a9b8c7d
+        type: string
+    type: object
   entity.Property:
     properties:
       apartment:
@@ -46,6 +145,108 @@ definitions:
         type: string
       street:
         example: Tverskaya
+        type: string
+    type: object
+  entity.PropertyDetail:
+    description: 'Объект недвижимости с автоматически собранными связанными сущностями:
+      показаниями счетчиков, счетами, будущими начислениями, данными аренды и арендодателя.'
+    properties:
+      apartment:
+        example: "45"
+        type: string
+      applications:
+        description: 'Applications is always empty: there is no applications/tickets
+          subsystem implemented yet.'
+        items: {}
+        type: array
+      balance:
+        example: 1250.75
+        type: number
+      bills:
+        items:
+          $ref: '#/definitions/entity.Bill'
+        type: array
+      city:
+        example: Moscow
+        type: string
+      coordinates:
+        example: 55.751244,37.618423
+        type: string
+      country:
+        example: Russia
+        type: string
+      customNextItems:
+        items:
+          $ref: '#/definitions/entity.CustomNextItem'
+        type: array
+      el1_tariff:
+        example: 5.7
+        type: number
+      el2_tariff:
+        example: 4.9
+        type: number
+      gvs_tariff:
+        example: 189.5
+        type: number
+      house:
+        example: "12"
+        type: string
+      hvs_tariff:
+        example: 45.2
+        type: number
+      id:
+        example: 7c9e6b4a-4321-4a1b-8def-abcdef123456
+        type: string
+      landlord_id:
+        example: 3f7e2b1a-1234-4c56-9abc-1234567890ab
+        type: string
+      landlordName:
+        example: Алексей Петров
+        type: string
+      landlordPhone:
+        example: "+79001234567"
+        type: string
+      name:
+        example: Sunny Apartment
+        type: string
+      readings:
+        items:
+          $ref: '#/definitions/entity.Reading'
+        type: array
+      region:
+        example: Moscow
+        type: string
+      street:
+        example: Tverskaya
+        type: string
+      tenant:
+        $ref: '#/definitions/entity.Lease'
+    type: object
+  entity.Reading:
+    description: Показания приборов учета квартиры.
+    properties:
+      date:
+        example: "2026-06-25T12:00:00.000Z"
+        type: string
+      el1:
+        example: 340
+        type: number
+      el2:
+        type: number
+      gvs:
+        example: 12.5
+        type: number
+      hvs:
+        example: 24.1
+        type: number
+      id:
+        example: read-123
+        type: string
+      is_accounted:
+        example: 1
+        type: integer
+      property_id:
+        example: prop-z8y7x6w
         type: string
     type: object
   request.Login:
@@ -98,24 +299,21 @@ definitions:
       country:
         example: Russia
         type: string
-      el1_tariff:
+      el1Tariff:
         example: 5.7
         type: number
-      el2_tariff:
+      el2Tariff:
         example: 4.9
         type: number
-      gvs_tariff:
+      gvsTariff:
         example: 189.5
         type: number
       house:
         example: "12"
         type: string
-      hvs_tariff:
+      hvsTariff:
         example: 45.2
         type: number
-      landlord_id:
-        example: 3f7e2b1a-1234-4c56-9abc-1234567890ab
-        type: string
       name:
         example: Sunny Apartment
         type: string
@@ -129,11 +327,10 @@ definitions:
     - apartment
     - city
     - coordinates
-    - el1_tariff
-    - gvs_tariff
+    - el1Tariff
+    - gvsTariff
     - house
-    - hvs_tariff
-    - landlord_id
+    - hvsTariff
     - name
     - region
     - street
@@ -224,6 +421,16 @@ definitions:
         type: string
       tenantPropertyId:
         example: prop-z8y7x6w
+        type: string
+    type: object
+  response.PropertySummary:
+    description: Краткая информация о только что созданном объекте недвижимости.
+    properties:
+      id:
+        example: prop-k8r3f9d
+        type: string
+      name:
+        example: Студия у метро
         type: string
     type: object
 info:
@@ -381,9 +588,12 @@ paths:
       - auth
   /properties:
     get:
-      description: Returns all properties owned by the currently authenticated user,
-        so a landlord can see their full property portfolio. Only properties the caller
-        owns are returned; other landlords' properties are never exposed.
+      description: 'Protected. Returns the caller''s properties with an automatic
+        nested assembly of related entities (meter readings, bills with their line
+        items, upcoming custom charges, lease/tenant info, landlord contact). Landlords
+        see every property they own; tenants see the single property they lease, if
+        any. The "applications" field is always empty: there is no applications/tickets
+        subsystem implemented yet.'
       produces:
       - application/json
       responses:
@@ -391,7 +601,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/entity.Property'
+              $ref: '#/definitions/entity.PropertyDetail'
             type: array
         "401":
           description: not authenticated
@@ -404,6 +614,52 @@ paths:
       security:
       - CookieAuth: []
       summary: List properties
+      tags:
+      - properties
+    post:
+      consumes:
+      - application/json
+      description: Protected, Landlord only. Creates a new rental property owned by
+        the authenticated landlord, registering its address and utility tariffs (hot/cold
+        water, electricity) that will later be used for billing calculations. The
+        new property starts with a zero balance.
+      parameters:
+      - description: Property data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.Property'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.PropertySummary'
+        "400":
+          description: invalid request body
+          schema:
+            $ref: '#/definitions/response.Error'
+        "401":
+          description: not authenticated
+          schema:
+            $ref: '#/definitions/response.Error'
+        "404":
+          description: landlord not found
+          schema:
+            $ref: '#/definitions/response.Error'
+        "409":
+          description: property already exists
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      security:
+      - CookieAuth: []
+      summary: Create a property
       tags:
       - properties
   /properties/{id}:
@@ -526,46 +782,6 @@ paths:
       security:
       - CookieAuth: []
       summary: Update a property
-      tags:
-      - properties
-  /properties/property:
-    post:
-      consumes:
-      - application/json
-      description: Creates a new rental property for a landlord, registering its address
-        and utility tariffs (hot/cold water, electricity) that will later be used
-        for billing calculations. The new property starts with a zero balance.
-      parameters:
-      - description: Property data
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/request.Property'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/entity.Property'
-        "400":
-          description: invalid request body
-          schema:
-            $ref: '#/definitions/response.Error'
-        "404":
-          description: landlord not found
-          schema:
-            $ref: '#/definitions/response.Error'
-        "409":
-          description: property already exists
-          schema:
-            $ref: '#/definitions/response.Error'
-        "500":
-          description: internal server error
-          schema:
-            $ref: '#/definitions/response.Error'
-      summary: Create a property
       tags:
       - properties
 securityDefinitions:

@@ -2,6 +2,7 @@ package property
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -11,18 +12,36 @@ import (
 )
 
 type UseCase struct {
-	repo repo.PropertyRepo
+	repo        repo.PropertyRepo
+	leases      repo.LeaseRepo
+	readings    repo.ReadingRepo
+	bills       repo.BillRepo
+	customItems repo.CustomNextItemRepo
+	users       repo.UserRepo
 }
 
-func New(r repo.PropertyRepo) *UseCase {
+func New(
+	r repo.PropertyRepo,
+	leases repo.LeaseRepo,
+	readings repo.ReadingRepo,
+	bills repo.BillRepo,
+	customItems repo.CustomNextItemRepo,
+	users repo.UserRepo,
+) *UseCase {
 	return &UseCase{
-		repo: r,
+		repo:        r,
+		leases:      leases,
+		readings:    readings,
+		bills:       bills,
+		customItems: customItems,
+		users:       users,
 	}
 }
 
-func (uc *UseCase) CreateProperty(ctx context.Context, req request.Property) (entity.Property, error) {
+func (uc *UseCase) CreateProperty(ctx context.Context, landlordID string, req request.Property) (entity.Property, error) {
 	property := entity.Property{
 		ID:          uuid.NewString(),
+		LandlordID:  landlordID,
 		Name:        req.Name,
 		Coordinates: req.Coordinates,
 		Country:     req.Country,
@@ -45,13 +64,91 @@ func (uc *UseCase) CreateProperty(ctx context.Context, req request.Property) (en
 	return property, nil
 }
 
-func (uc *UseCase) GetProperties(ctx context.Context, landlordID string) ([]entity.Property, error) {
-	properties, err := uc.repo.GetByLandlordID(ctx, landlordID)
-	if err != nil {
-		return nil, fmt.Errorf("PropertyUseCase - GetProperties - uc.repo.GetByLandlordID: %w", err)
+// GetProperties returns the caller's properties enriched with their related entities
+// (readings, bills, custom charges, lease/tenant info, landlord contact).
+// Landlords see every property they own; tenants see the single property they lease, if any.
+func (uc *UseCase) GetProperties(ctx context.Context, userID string, role entity.Role) ([]entity.PropertyDetail, error) {
+	var properties []entity.Property
+
+	switch role {
+	case entity.RoleLandlord:
+		props, err := uc.repo.GetByLandlordID(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("PropertyUseCase - GetProperties - uc.repo.GetByLandlordID: %w", err)
+		}
+		properties = props
+	case entity.RoleTenant:
+		lease, err := uc.leases.GetByTenantUserID(ctx, userID)
+		switch {
+		case err == nil:
+			prop, err := uc.repo.GetByID(ctx, lease.PropertyID)
+			if err != nil {
+				return nil, fmt.Errorf("PropertyUseCase - GetProperties - uc.repo.GetByID: %w", err)
+			}
+			properties = []entity.Property{prop}
+		case errors.Is(err, repo.ErrLeaseNotFound):
+			properties = nil
+		default:
+			return nil, fmt.Errorf("PropertyUseCase - GetProperties - uc.leases.GetByTenantUserID: %w", err)
+		}
+	default:
+		properties = nil
 	}
 
-	return properties, nil
+	details := make([]entity.PropertyDetail, 0, len(properties))
+	for _, prop := range properties {
+		detail, err := uc.buildPropertyDetail(ctx, prop)
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, detail)
+	}
+
+	return details, nil
+}
+
+func (uc *UseCase) buildPropertyDetail(ctx context.Context, prop entity.Property) (entity.PropertyDetail, error) {
+	readings, err := uc.readings.GetByPropertyID(ctx, prop.ID)
+	if err != nil {
+		return entity.PropertyDetail{}, fmt.Errorf("PropertyUseCase - buildPropertyDetail - uc.readings.GetByPropertyID: %w", err)
+	}
+
+	bills, err := uc.bills.GetByPropertyID(ctx, prop.ID)
+	if err != nil {
+		return entity.PropertyDetail{}, fmt.Errorf("PropertyUseCase - buildPropertyDetail - uc.bills.GetByPropertyID: %w", err)
+	}
+
+	customItems, err := uc.customItems.GetByPropertyID(ctx, prop.ID)
+	if err != nil {
+		return entity.PropertyDetail{}, fmt.Errorf("PropertyUseCase - buildPropertyDetail - uc.customItems.GetByPropertyID: %w", err)
+	}
+
+	var tenant *entity.Lease
+	lease, err := uc.leases.GetByPropertyID(ctx, prop.ID)
+	switch {
+	case err == nil:
+		tenant = &lease
+	case errors.Is(err, repo.ErrLeaseNotFound):
+		tenant = nil
+	default:
+		return entity.PropertyDetail{}, fmt.Errorf("PropertyUseCase - buildPropertyDetail - uc.leases.GetByPropertyID: %w", err)
+	}
+
+	landlord, err := uc.users.GetByID(ctx, prop.LandlordID)
+	if err != nil {
+		return entity.PropertyDetail{}, fmt.Errorf("PropertyUseCase - buildPropertyDetail - uc.users.GetByID: %w", err)
+	}
+
+	return entity.PropertyDetail{
+		Property:        prop,
+		Readings:        readings,
+		Bills:           bills,
+		CustomNextItems: customItems,
+		Tenant:          tenant,
+		LandlordName:    landlord.Name,
+		LandlordPhone:   landlord.Phone,
+		Applications:    []any{},
+	}, nil
 }
 
 func (uc *UseCase) GetProperty(ctx context.Context, id, landlordID string) (entity.Property, error) {
