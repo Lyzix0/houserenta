@@ -37,6 +37,8 @@ type propertyUseCaseMock struct {
 	getPropertyFn    func(ctx context.Context, id, landlordID string) (entity.Property, error)
 	updatePropertyFn func(ctx context.Context, id, landlordID string, body request.Property) error
 	deletePropertyFn func(ctx context.Context, id, landlordID string) error
+	createLeaseFn    func(ctx context.Context, propertyID, landlordID string, body request.Lease) error
+	deleteLeaseFn    func(ctx context.Context, propertyID, landlordID string) error
 }
 
 func (m *propertyUseCaseMock) CreateProperty(ctx context.Context, landlordID string, body request.Property) (entity.Property, error) {
@@ -57,4 +59,12 @@ func (m *propertyUseCaseMock) UpdateProperty(ctx context.Context, id, landlordID
 
 func (m *propertyUseCaseMock) DeleteProperty(ctx context.Context, id, landlordID string) error {
 	return m.deletePropertyFn(ctx, id, landlordID)
+}
+
+func (m *propertyUseCaseMock) CreateLease(ctx context.Context, propertyID, landlordID string, body request.Lease) error {
+	return m.createLeaseFn(ctx, propertyID, landlordID, body)
+}
+
+func (m *propertyUseCaseMock) DeleteLease(ctx context.Context, propertyID, landlordID string) error {
+	return m.deleteLeaseFn(ctx, propertyID, landlordID)
 }

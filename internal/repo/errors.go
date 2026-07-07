@@ -11,5 +11,6 @@ var (
 	ErrPropertyNotFound      = errors.New("property not found")
 	ErrLandlordNotFound      = errors.New("landlord not found")
 
-	ErrLeaseNotFound = errors.New("lease not found")
+	ErrLeaseNotFound  = errors.New("lease not found")
+	ErrTenantNotFound = errors.New("tenant not found")
 )

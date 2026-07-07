@@ -249,6 +249,34 @@ definitions:
         example: prop-z8y7x6w
         type: string
     type: object
+  request.Lease:
+    properties:
+      monthsOfRent:
+        example: 11
+        type: integer
+      paymentDay:
+        example: 10
+        maximum: 28
+        minimum: 1
+        type: integer
+      price:
+        example: 32000
+        type: number
+      readingDay:
+        example: 28
+        maximum: 28
+        minimum: 1
+        type: integer
+      tenantUserId:
+        example: user-a9b8c7d
+        type: string
+    required:
+    - monthsOfRent
+    - paymentDay
+    - price
+    - readingDay
+    - tenantUserId
+    type: object
   request.Login:
     properties:
       email:
@@ -664,11 +692,9 @@ paths:
       - properties
   /properties/{id}:
     delete:
-      description: Protected, Landlord only. Permanently deletes a property. Per business
-        requirements this should also automatically terminate any linked rental contracts
-        and clear the rental reference for bound tenants; note that contract/tenancy
-        linkage does not exist yet in this API version, so only the property record
-        itself is removed for now. Only the owning landlord may delete their property.
+      description: Protected, Landlord only. Permanently deletes a property. Any lease
+        bound to it is automatically removed as well (database cascade), unlinking
+        the tenant. Only the owning landlord may delete their property.
       parameters:
       - description: Property ID
         in: path
@@ -782,6 +808,93 @@ paths:
       security:
       - CookieAuth: []
       summary: Update a property
+      tags:
+      - properties
+  /properties/{id}/lease:
+    delete:
+      description: 'Protected, Landlord only. Terminates the property''s lease and
+        unlinks the tenant. Idempotent: succeeds even if the property currently has
+        no lease.'
+      parameters:
+      - description: Property ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "401":
+          description: not authenticated
+          schema:
+            $ref: '#/definitions/response.Error'
+        "404":
+          description: property not found
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      security:
+      - CookieAuth: []
+      summary: Move a tenant out
+      tags:
+      - properties
+    post:
+      consumes:
+      - application/json
+      description: 'Protected, Landlord only. Creates a lease linking a registered
+        tenant to the property. If the property already has an active lease, it is
+        superseded by this one. Per business requirements this should also automatically
+        cancel other third-party applications for the property; note: there is no
+        applications/tickets subsystem implemented yet, so this step is a no-op.'
+      parameters:
+      - description: Property ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lease data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.Lease'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: invalid request body
+          schema:
+            $ref: '#/definitions/response.Error'
+        "401":
+          description: not authenticated
+          schema:
+            $ref: '#/definitions/response.Error'
+        "404":
+          description: property not found, or tenant not found
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      security:
+      - CookieAuth: []
+      summary: Move a tenant in
       tags:
       - properties
 securityDefinitions:

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/potom_pridumaem/internal/controller/v1/request"
@@ -211,6 +212,72 @@ func (uc *UseCase) DeleteProperty(ctx context.Context, id, landlordID string) er
 
 	if err := uc.repo.Delete(ctx, id); err != nil {
 		return fmt.Errorf("PropertyUseCase - DeleteProperty - uc.repo.Delete: %w", err)
+	}
+
+	return nil
+}
+
+// CreateLease moves a registered tenant into the property, superseding whatever lease
+// (if any) previously occupied it, since a property can only have one active tenant.
+func (uc *UseCase) CreateLease(ctx context.Context, propertyID, landlordID string, body request.Lease) error {
+	prop, err := uc.repo.GetByID(ctx, propertyID)
+	if err != nil {
+		return fmt.Errorf("PropertyUseCase - CreateLease - uc.repo.GetByID: %w", err)
+	}
+
+	if prop.LandlordID != landlordID {
+		return repo.ErrPropertyNotFound
+	}
+
+	tenant, err := uc.users.GetByID(ctx, body.TenantUserID)
+	if err != nil {
+		if errors.Is(err, repo.ErrUserNotFound) {
+			return repo.ErrTenantNotFound
+		}
+		return fmt.Errorf("PropertyUseCase - CreateLease - uc.users.GetByID: %w", err)
+	}
+
+	if tenant.Role != entity.RoleTenant {
+		return repo.ErrTenantNotFound
+	}
+
+	startDate := time.Now().UTC()
+	endDate := startDate.AddDate(0, body.MonthsOfRent, 0)
+
+	lease := entity.Lease{
+		ID:           uuid.NewString(),
+		PropertyID:   propertyID,
+		TenantUserID: tenant.ID,
+		Name:         tenant.Name,
+		Document:     tenant.Document,
+		Phone:        tenant.Phone,
+		MonthsOfRent: body.MonthsOfRent,
+		Price:        body.Price,
+		PaymentDay:   body.PaymentDay,
+		ReadingDay:   body.ReadingDay,
+		StartDate:    startDate.Format(time.RFC3339),
+		EndDate:      endDate.Format(time.RFC3339),
+	}
+
+	if err := uc.leases.Upsert(ctx, lease); err != nil {
+		return fmt.Errorf("PropertyUseCase - CreateLease - uc.leases.Upsert: %w", err)
+	}
+
+	return nil
+}
+
+func (uc *UseCase) DeleteLease(ctx context.Context, propertyID, landlordID string) error {
+	prop, err := uc.repo.GetByID(ctx, propertyID)
+	if err != nil {
+		return fmt.Errorf("PropertyUseCase - DeleteLease - uc.repo.GetByID: %w", err)
+	}
+
+	if prop.LandlordID != landlordID {
+		return repo.ErrPropertyNotFound
+	}
+
+	if err := uc.leases.DeleteByPropertyID(ctx, propertyID); err != nil {
+		return fmt.Errorf("PropertyUseCase - DeleteLease - uc.leases.DeleteByPropertyID: %w", err)
 	}
 
 	return nil

@@ -21,6 +21,8 @@ type (
 		GetProperty(ctx context.Context, id, landlordID string) (entity.Property, error)
 		UpdateProperty(ctx context.Context, id, landlordID string, body request.Property) error
 		DeleteProperty(ctx context.Context, id, landlordID string) error
+		CreateLease(ctx context.Context, propertyID, landlordID string, body request.Lease) error
+		DeleteLease(ctx context.Context, propertyID, landlordID string) error
 	}
 
 	// UserProfile is the full session profile returned by the auth/me endpoint,

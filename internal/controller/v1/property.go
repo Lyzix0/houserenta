@@ -155,9 +155,81 @@ func (r *V1) updateProperty(ctx fiber.Ctx) error {
 	return ctx.Status(http.StatusOK).JSON(fiber.Map{"ok": true})
 }
 
+// createLease godoc
+// @Summary      Move a tenant in
+// @Description  Protected, Landlord only. Creates a lease linking a registered tenant to the property. If the property already has an active lease, it is superseded by this one. Per business requirements this should also automatically cancel other third-party applications for the property; note: there is no applications/tickets subsystem implemented yet, so this step is a no-op.
+// @Tags         properties
+// @Accept       json
+// @Produce      json
+// @Security     CookieAuth
+// @Param        id     path      string         true  "Property ID"
+// @Param        input  body      request.Lease  true  "Lease data"
+// @Success      200    {object}  map[string]bool
+// @Failure      400    {object}  response.Error  "invalid request body"
+// @Failure      401    {object}  response.Error  "not authenticated"
+// @Failure      404    {object}  response.Error  "property not found, or tenant not found"
+// @Failure      500    {object}  response.Error  "internal server error"
+// @Router       /properties/{id}/lease [post]
+func (r *V1) createLease(ctx fiber.Ctx) error {
+	var body request.Lease
+	if err := ctx.Bind().Body(&body); err != nil {
+		r.l.Error("create lease json:", zap.Error(err))
+		return errorResponse(ctx, http.StatusBadRequest, "invalid body")
+	}
+
+	if err := r.v.Struct(body); err != nil {
+		r.l.Error("validate lease:", zap.Error(err))
+		return errorResponse(ctx, http.StatusBadRequest, "invalid body")
+	}
+
+	landlordID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
+
+	if err := r.p.CreateLease(ctx.Context(), ctx.Params("id"), landlordID, body); err != nil {
+		switch {
+		case errors.Is(err, repo.ErrPropertyNotFound):
+			return errorResponse(ctx, http.StatusNotFound, "property not found")
+		case errors.Is(err, repo.ErrTenantNotFound):
+			return errorResponse(ctx, http.StatusNotFound, "Жилец не найден в системе")
+		default:
+			r.l.Error("create lease:", zap.Error(err))
+			return errorResponse(ctx, http.StatusInternalServerError, "failed to create lease")
+		}
+	}
+
+	return ctx.Status(http.StatusOK).JSON(fiber.Map{"ok": true})
+}
+
+// deleteLease godoc
+// @Summary      Move a tenant out
+// @Description  Protected, Landlord only. Terminates the property's lease and unlinks the tenant. Idempotent: succeeds even if the property currently has no lease.
+// @Tags         properties
+// @Produce      json
+// @Security     CookieAuth
+// @Param        id   path      string  true  "Property ID"
+// @Success      200  {object}  map[string]bool
+// @Failure      401  {object}  response.Error  "not authenticated"
+// @Failure      404  {object}  response.Error  "property not found"
+// @Failure      500  {object}  response.Error  "internal server error"
+// @Router       /properties/{id}/lease [delete]
+func (r *V1) deleteLease(ctx fiber.Ctx) error {
+	landlordID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
+
+	if err := r.p.DeleteLease(ctx.Context(), ctx.Params("id"), landlordID); err != nil {
+		switch {
+		case errors.Is(err, repo.ErrPropertyNotFound):
+			return errorResponse(ctx, http.StatusNotFound, "property not found")
+		default:
+			r.l.Error("delete lease:", zap.Error(err))
+			return errorResponse(ctx, http.StatusInternalServerError, "failed to delete lease")
+		}
+	}
+
+	return ctx.Status(http.StatusOK).JSON(fiber.Map{"ok": true})
+}
+
 // deleteProperty godoc
 // @Summary      Delete a property
-// @Description  Protected, Landlord only. Permanently deletes a property. Per business requirements this should also automatically terminate any linked rental contracts and clear the rental reference for bound tenants; note that contract/tenancy linkage does not exist yet in this API version, so only the property record itself is removed for now. Only the owning landlord may delete their property.
+// @Description  Protected, Landlord only. Permanently deletes a property. Any lease bound to it is automatically removed as well (database cascade), unlinking the tenant. Only the owning landlord may delete their property.
 // @Tags         properties
 // @Produce      json
 // @Security     CookieAuth
