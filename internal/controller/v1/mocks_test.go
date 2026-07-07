@@ -9,21 +9,26 @@ import (
 )
 
 type userUseCaseMock struct {
-	registerFn func(ctx context.Context, name, email, password, role, document, phone string) (entity.User, error)
-	loginFn    func(ctx context.Context, email, password string) (entity.User, error)
-	meFn       func(ctx context.Context, userID string) (usecase.UserProfile, error)
+	registerFn      func(ctx context.Context, name, email, password, role, document, phone string, paymentCard *string) (entity.User, error)
+	loginFn         func(ctx context.Context, identifier, password string) (entity.User, error)
+	meFn            func(ctx context.Context, userID string) (usecase.UserProfile, error)
+	updateProfileFn func(ctx context.Context, userID string, body request.Profile) error
 }
 
-func (m *userUseCaseMock) Register(ctx context.Context, name, email, password, role, document, phone string) (entity.User, error) {
-	return m.registerFn(ctx, name, email, password, role, document, phone)
+func (m *userUseCaseMock) Register(ctx context.Context, name, email, password, role, document, phone string, paymentCard *string) (entity.User, error) {
+	return m.registerFn(ctx, name, email, password, role, document, phone, paymentCard)
 }
 
-func (m *userUseCaseMock) Login(ctx context.Context, email, password string) (entity.User, error) {
-	return m.loginFn(ctx, email, password)
+func (m *userUseCaseMock) Login(ctx context.Context, identifier, password string) (entity.User, error) {
+	return m.loginFn(ctx, identifier, password)
 }
 
 func (m *userUseCaseMock) Me(ctx context.Context, userID string) (usecase.UserProfile, error) {
 	return m.meFn(ctx, userID)
+}
+
+func (m *userUseCaseMock) UpdateProfile(ctx context.Context, userID string, body request.Profile) error {
+	return m.updateProfileFn(ctx, userID, body)
 }
 
 type propertyUseCaseMock struct {

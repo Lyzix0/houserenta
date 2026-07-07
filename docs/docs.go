@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/auth/login": {
             "post": {
-                "description": "Authenticates a user by email and password, and creates a session",
+                "description": "Authenticates a user by email or phone and password, and creates a session",
                 "consumes": [
                     "application/json"
                 ],
@@ -43,17 +43,11 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.User"
+                            "$ref": "#/definitions/response.AuthUser"
                         }
                     },
                     "400": {
-                        "description": "invalid request body",
-                        "schema": {
-                            "$ref": "#/definitions/response.Error"
-                        }
-                    },
-                    "401": {
-                        "description": "invalid credentials",
+                        "description": "invalid request body or credentials",
                         "schema": {
                             "$ref": "#/definitions/response.Error"
                         }
@@ -78,8 +72,14 @@ const docTemplate = `{
                 ],
                 "summary": "Log out a user",
                 "responses": {
-                    "204": {
-                        "description": "session terminated successfully"
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
                     },
                     "500": {
                         "description": "internal server error",
@@ -127,9 +127,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/profile": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Protected. Partially updates the authenticated user's personal data, including changing the password. Only the provided fields are changed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Update account settings",
+                "parameters": [
+                    {
+                        "description": "Profile fields to update",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.Profile"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "invalid request body or email already registered",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/register": {
             "post": {
-                "description": "Creates a new user (landlord, tenant, or admin)",
+                "description": "Creates a new user (landlord or tenant) and immediately logs them in, setting the session cookie",
                 "consumes": [
                     "application/json"
                 ],
@@ -152,20 +212,14 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.User"
+                            "$ref": "#/definitions/response.AuthUser"
                         }
                     },
                     "400": {
-                        "description": "invalid request body or role",
-                        "schema": {
-                            "$ref": "#/definitions/response.Error"
-                        }
-                    },
-                    "409": {
-                        "description": "user already exists",
+                        "description": "invalid request body, invalid role, or email already registered",
                         "schema": {
                             "$ref": "#/definitions/response.Error"
                         }
@@ -520,57 +574,6 @@ const docTemplate = `{
                 }
             }
         },
-        "entity.Role": {
-            "type": "string",
-            "enum": [
-                "landlord",
-                "tenant",
-                "admin"
-            ],
-            "x-enum-varnames": [
-                "RoleLandlord",
-                "RoleTenant",
-                "RoleAdmin"
-            ]
-        },
-        "entity.User": {
-            "description": "Основная модель пользователя: арендодатель, арендатор или администратор.",
-            "type": "object",
-            "properties": {
-                "document": {
-                    "type": "string",
-                    "example": "4510 123456"
-                },
-                "email": {
-                    "type": "string",
-                    "example": "ivan.petrov@example.com"
-                },
-                "id": {
-                    "type": "string",
-                    "example": "3f7e2b1a-1234-4c56-9abc-1234567890ab"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Ivan Petrov"
-                },
-                "payment_card": {
-                    "type": "string",
-                    "example": "1234567812345678"
-                },
-                "phone": {
-                    "type": "string",
-                    "example": "+79161234567"
-                },
-                "role": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/entity.Role"
-                        }
-                    ],
-                    "example": "landlord"
-                }
-            }
-        },
         "request.Login": {
             "type": "object",
             "required": [
@@ -585,6 +588,38 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "strongPass123"
+                }
+            }
+        },
+        "request.Profile": {
+            "type": "object",
+            "properties": {
+                "document": {
+                    "type": "string",
+                    "example": "4510 123456"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "newemail@example.com"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Ivan Kolesnikov"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "newSuperSecurePassword"
+                },
+                "paymentCard": {
+                    "type": "string",
+                    "example": "1111222233334444"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+79997776655"
                 }
             }
         },
@@ -661,12 +696,11 @@ const docTemplate = `{
         "request.Register": {
             "type": "object",
             "required": [
-                "document",
                 "email",
+                "initialRole",
                 "name",
                 "password",
-                "phone",
-                "role"
+                "phone"
             ],
             "properties": {
                 "document": {
@@ -676,6 +710,14 @@ const docTemplate = `{
                 "email": {
                     "type": "string",
                     "example": "ivan.petrov@example.com"
+                },
+                "initialRole": {
+                    "type": "string",
+                    "enum": [
+                        "landlord",
+                        "tenant"
+                    ],
+                    "example": "landlord"
                 },
                 "name": {
                     "type": "string",
@@ -688,22 +730,35 @@ const docTemplate = `{
                     "minLength": 6,
                     "example": "strongPass123"
                 },
-                "payment_card": {
+                "paymentCard": {
                     "type": "string",
                     "example": "1234567812345678"
                 },
                 "phone": {
                     "type": "string",
                     "example": "+79161234567"
+                }
+            }
+        },
+        "response.AuthUser": {
+            "description": "Краткая информация о пользователе, возвращаемая при регистрации и входе.",
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "ivanov@example.com"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "user-a9b8c7d"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Иванов Иван Иванович"
                 },
                 "role": {
                     "type": "string",
-                    "enum": [
-                        "landlord",
-                        "tenant",
-                        "admin"
-                    ],
-                    "example": "landlord"
+                    "example": "tenant"
                 }
             }
         },

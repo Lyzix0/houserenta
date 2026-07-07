@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/google/uuid"
+	"github.com/potom_pridumaem/internal/controller/v1/request"
 	entity "github.com/potom_pridumaem/internal/entity/users"
 	"github.com/potom_pridumaem/internal/repo"
 	"github.com/potom_pridumaem/internal/usecase"
@@ -25,7 +26,7 @@ func New(r repo.UserRepo, leases repo.LeaseRepo) *UseCase {
 	}
 }
 
-func (uc *UseCase) Register(ctx context.Context, name, email, password, role, document, phone string) (entity.User, error) {
+func (uc *UseCase) Register(ctx context.Context, name, email, password, role, document, phone string, paymentCard *string) (entity.User, error) {
 	if entity.Role(role) == entity.RoleAdmin {
 		return entity.User{}, fmt.Errorf("UserUseCase - Register: %w", entity.ErrInvalidRole)
 	}
@@ -43,6 +44,7 @@ func (uc *UseCase) Register(ctx context.Context, name, email, password, role, do
 		Role:         entity.Role(role),
 		Document:     document,
 		Phone:        phone,
+		PaymentCard:  paymentCard,
 	}
 
 	if err := user.Validate(); err != nil {
@@ -56,13 +58,13 @@ func (uc *UseCase) Register(ctx context.Context, name, email, password, role, do
 	return user, nil
 }
 
-func (uc *UseCase) Login(ctx context.Context, email, password string) (entity.User, error) {
-	user, err := uc.repo.GetByEmail(ctx, email)
+func (uc *UseCase) Login(ctx context.Context, identifier, password string) (entity.User, error) {
+	user, err := uc.repo.GetByEmailOrPhone(ctx, identifier)
 	if err != nil {
 		if errors.Is(err, repo.ErrUserNotFound) {
 			return entity.User{}, usecase.ErrInvalidCredentials
 		}
-		return entity.User{}, fmt.Errorf("UserUseCase - Login - uc.repo.GetByEmail: %w", err)
+		return entity.User{}, fmt.Errorf("UserUseCase - Login - uc.repo.GetByEmailOrPhone: %w", err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
@@ -70,6 +72,46 @@ func (uc *UseCase) Login(ctx context.Context, email, password string) (entity.Us
 	}
 
 	return user, nil
+}
+
+func (uc *UseCase) UpdateProfile(ctx context.Context, userID string, body request.Profile) error {
+	user, err := uc.repo.GetByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("UserUseCase - UpdateProfile - uc.repo.GetByID: %w", err)
+	}
+
+	if body.Name != nil {
+		user.Name = *body.Name
+	}
+	if body.Document != nil {
+		user.Document = *body.Document
+	}
+	if body.Phone != nil {
+		user.Phone = *body.Phone
+	}
+	if body.PaymentCard != nil {
+		user.PaymentCard = body.PaymentCard
+	}
+	if body.Email != nil {
+		user.Email = *body.Email
+	}
+	if body.Password != nil {
+		hash, err := bcrypt.GenerateFromPassword([]byte(*body.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("UserUseCase - UpdateProfile - bcrypt.GenerateFromPassword: %w", err)
+		}
+		user.PasswordHash = string(hash)
+	}
+
+	if err := user.Validate(); err != nil {
+		return fmt.Errorf("UserUseCase - UpdateProfile - user.Validate: %w", err)
+	}
+
+	if err := uc.repo.Update(ctx, &user); err != nil {
+		return fmt.Errorf("UserUseCase - UpdateProfile - uc.repo.Update: %w", err)
+	}
+
+	return nil
 }
 
 func (uc *UseCase) Me(ctx context.Context, userID string) (usecase.UserProfile, error) {
