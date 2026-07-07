@@ -97,7 +97,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Protected. Returns the full profile of the authenticated user for the current session, including the linked property when the caller is a tenant. Per business requirements this should also trigger an autobilling check; note: autobilling is not implemented yet in this API version, so only profile data is returned for now.",
+                "description": "Protected. Returns the full profile of the authenticated user for the current session, including the linked property when the caller is a tenant. Also triggers the lazy auto-billing check (see GET /properties) as a passive side effect; a billing failure is logged and does not affect this response.",
                 "produces": [
                     "application/json"
                 ],
@@ -240,7 +240,7 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Protected. Returns the caller's properties with an automatic nested assembly of related entities (meter readings, bills with their line items, upcoming custom charges, lease/tenant info, landlord contact). Landlords see every property they own; tenants see the single property they lease, if any. The \"applications\" field is always empty: there is no applications/tickets subsystem implemented yet.",
+                "description": "Protected. Returns the caller's properties with an automatic nested assembly of related entities (meter readings, bills with their line items, upcoming custom charges, lease/tenant info, landlord contact). Landlords see every property they own; tenants see the single property they lease, if any. The \"applications\" field is always empty: there is no applications/tickets subsystem implemented yet. Also triggers the lazy auto-billing check: for each active lease, if 30+ days have passed since its last rent bill (or none exists yet), a new bill is generated from the lease price, any queued custom charges, and unbilled utility consumption; a billing failure is logged and does not affect this response.",
                 "produces": [
                     "application/json"
                 ],
@@ -896,6 +896,10 @@ const docTemplate = `{
                 "total": {
                     "type": "number",
                     "example": 35000
+                },
+                "type": {
+                    "type": "string",
+                    "example": "rent"
                 }
             }
         },

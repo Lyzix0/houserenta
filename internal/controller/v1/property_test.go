@@ -196,6 +196,39 @@ func TestGetProperties(t *testing.T) {
 			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusInternalServerError)
 		}
 	})
+
+	t.Run("triggers billing check but survives its failure", func(t *testing.T) {
+		var billingRan bool
+
+		u := &userUseCaseMock{
+			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
+				return entity.User{ID: "landlord-1", Email: email, Role: entity.RoleLandlord}, nil
+			},
+		}
+		p := &propertyUseCaseMock{
+			getPropertiesFn: func(context.Context, string, entity.Role) ([]entity.PropertyDetail, error) {
+				return []entity.PropertyDetail{}, nil
+			},
+		}
+		app := newTestAppWithBilling(u, p, &billingUseCaseMock{
+			runFn: func(context.Context) error {
+				billingRan = true
+				return errors.New("billing boom")
+			},
+		})
+
+		cookie := loginAndGetCookie(t, app)
+
+		resp := doRequest(t, app, http.MethodGet, "/v1/properties/", nil, cookie)
+		defer resp.Body.Close()
+
+		if !billingRan {
+			t.Fatal("expected billing.Run to be called")
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("status = %d, want %d (billing failure must not break the response)", resp.StatusCode, http.StatusOK)
+		}
+	})
 }
 
 func TestGetProperty(t *testing.T) {

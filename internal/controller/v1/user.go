@@ -154,7 +154,7 @@ func (r *V1) startSession(ctx fiber.Ctx, usr entity.User) error {
 
 // me godoc
 // @Summary      Current session
-// @Description  Protected. Returns the full profile of the authenticated user for the current session, including the linked property when the caller is a tenant. Per business requirements this should also trigger an autobilling check; note: autobilling is not implemented yet in this API version, so only profile data is returned for now.
+// @Description  Protected. Returns the full profile of the authenticated user for the current session, including the linked property when the caller is a tenant. Also triggers the lazy auto-billing check (see GET /properties) as a passive side effect; a billing failure is logged and does not affect this response.
 // @Tags         auth
 // @Produce      json
 // @Security     CookieAuth
@@ -163,6 +163,8 @@ func (r *V1) startSession(ctx fiber.Ctx, usr entity.User) error {
 // @Failure      500  {object}  response.Error  "internal server error"
 // @Router       /auth/me [get]
 func (r *V1) me(ctx fiber.Ctx) error {
+	r.runBillingCheck(ctx)
+
 	userID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
 
 	profile, err := r.u.Me(ctx.Context(), userID)

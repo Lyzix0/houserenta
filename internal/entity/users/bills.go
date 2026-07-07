@@ -15,6 +15,7 @@ type Bill struct {
 	Date       string     `json:"date" example:"2026-06-25T14:00:00.000Z"`
 	DueDate    string     `json:"due_date" example:"2026-07-05T00:00:00.000Z"`
 	Status     string     `json:"status" example:"unpaid"`
+	Type       string     `json:"type" example:"rent"`
 	Total      float64    `json:"total" example:"35000"`
 	Items      []BillItem `json:"items"`
 }

@@ -64,3 +64,19 @@ func (r *CustomNextItemRepo) Store(ctx context.Context, item entity.CustomNextIt
 
 	return nil
 }
+
+func (r *CustomNextItemRepo) DeleteByPropertyID(ctx context.Context, propertyID string) error {
+	sql, args, err := r.Builder.
+		Delete("app.custom_next_items").
+		Where("property_id = ?", propertyID).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("CustomNextItemRepo - DeleteByPropertyID - r.Builder: %w", err)
+	}
+
+	if _, err := r.Pool.Exec(ctx, sql, args...); err != nil {
+		return fmt.Errorf("CustomNextItemRepo - DeleteByPropertyID - r.Pool.Exec: %w", err)
+	}
+
+	return nil
+}

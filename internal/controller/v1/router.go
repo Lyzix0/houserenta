@@ -14,7 +14,7 @@ import (
 
 func NewRoutes(
 	apiV1Group fiber.Router, u usecase.User,
-	p usecase.Property, l *zap.Logger,
+	p usecase.Property, billing usecase.Billing, l *zap.Logger,
 ) {
 	sess := session.NewStore(session.Config{
 		IdleTimeout:    24 * time.Hour,
@@ -23,11 +23,12 @@ func NewRoutes(
 	})
 
 	r := &V1{
-		p:    p,
-		u:    u,
-		l:    l,
-		v:    validator.New(validator.WithRequiredStructEnabled()),
-		sess: sess,
+		p:       p,
+		u:       u,
+		billing: billing,
+		l:       l,
+		v:       validator.New(validator.WithRequiredStructEnabled()),
+		sess:    sess,
 	}
 
 	authGroup := apiV1Group.Group("/auth")

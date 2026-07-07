@@ -2,13 +2,17 @@ package persistent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Masterminds/squirrel"
+	"github.com/jackc/pgx/v5"
 	entity "github.com/potom_pridumaem/internal/entity/users"
 	"github.com/potom_pridumaem/internal/repo"
 	"github.com/potom_pridumaem/pkg/postgres"
 )
+
+var billColumns = []string{"id", "property_id", "date", "due_date", "status", "type", "total"}
 
 type BillRepo struct {
 	*postgres.Postgres
@@ -20,7 +24,7 @@ func NewBillRepo(pg *postgres.Postgres) *BillRepo {
 
 func (r *BillRepo) GetByPropertyID(ctx context.Context, propertyID string) ([]entity.Bill, error) {
 	sql, args, err := r.Builder.
-		Select("id", "property_id", "date", "due_date", "status", "total").
+		Select(billColumns...).
 		From("app.bills").
 		Where("property_id = ?", propertyID).
 		ToSql()
@@ -39,7 +43,7 @@ func (r *BillRepo) GetByPropertyID(ctx context.Context, propertyID string) ([]en
 	billIDs := make([]string, 0)
 	for rows.Next() {
 		var bill entity.Bill
-		if err := rows.Scan(&bill.ID, &bill.PropertyID, &bill.Date, &bill.DueDate, &bill.Status, &bill.Total); err != nil {
+		if err := rows.Scan(&bill.ID, &bill.PropertyID, &bill.Date, &bill.DueDate, &bill.Status, &bill.Type, &bill.Total); err != nil {
 			return nil, fmt.Errorf("BillRepo - GetByPropertyID - rows.Scan: %w", err)
 		}
 		bill.Items = make([]entity.BillItem, 0)
@@ -105,6 +109,77 @@ func (r *BillRepo) UpdateStatus(ctx context.Context, billID, propertyID, status 
 
 	if tag.RowsAffected() == 0 {
 		return repo.ErrBillNotFound
+	}
+
+	return nil
+}
+
+// GetLastByPropertyIDAndType returns the most recently dated bill of the given type
+// for the property, or repo.ErrBillNotFound if none has ever been issued.
+func (r *BillRepo) GetLastByPropertyIDAndType(ctx context.Context, propertyID, billType string) (entity.Bill, error) {
+	sql, args, err := r.Builder.
+		Select(billColumns...).
+		From("app.bills").
+		Where(squirrel.Eq{"property_id": propertyID, "type": billType}).
+		OrderBy("date DESC").
+		Limit(1).
+		ToSql()
+	if err != nil {
+		return entity.Bill{}, fmt.Errorf("BillRepo - GetLastByPropertyIDAndType - r.Builder: %w", err)
+	}
+
+	var bill entity.Bill
+	err = r.Pool.QueryRow(ctx, sql, args...).Scan(
+		&bill.ID, &bill.PropertyID, &bill.Date, &bill.DueDate, &bill.Status, &bill.Type, &bill.Total,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.Bill{}, repo.ErrBillNotFound
+		}
+		return entity.Bill{}, fmt.Errorf("BillRepo - GetLastByPropertyIDAndType - r.Pool.QueryRow: %w", err)
+	}
+
+	return bill, nil
+}
+
+// Store inserts the bill and all of its line items atomically.
+func (r *BillRepo) Store(ctx context.Context, bill entity.Bill) error {
+	tx, err := r.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("BillRepo - Store - r.Pool.Begin: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	billSQL, billArgs, err := r.Builder.
+		Insert("app.bills").
+		Columns(billColumns...).
+		Values(bill.ID, bill.PropertyID, bill.Date, bill.DueDate, bill.Status, bill.Type, bill.Total).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("BillRepo - Store - r.Builder bill: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, billSQL, billArgs...); err != nil {
+		return fmt.Errorf("BillRepo - Store - tx.Exec bill: %w", err)
+	}
+
+	for _, item := range bill.Items {
+		itemSQL, itemArgs, err := r.Builder.
+			Insert("app.bill_items").
+			Columns("id", "bill_id", "description", "amount").
+			Values(item.ID, bill.ID, item.Description, item.Amount).
+			ToSql()
+		if err != nil {
+			return fmt.Errorf("BillRepo - Store - r.Builder item: %w", err)
+		}
+
+		if _, err := tx.Exec(ctx, itemSQL, itemArgs...); err != nil {
+			return fmt.Errorf("BillRepo - Store - tx.Exec item: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("BillRepo - Store - tx.Commit: %w", err)
 	}
 
 	return nil

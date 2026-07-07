@@ -26,6 +26,7 @@ type (
 	LeaseRepo interface {
 		GetByTenantUserID(ctx context.Context, tenantUserID string) (entity.Lease, error)
 		GetByPropertyID(ctx context.Context, propertyID string) (entity.Lease, error)
+		GetAll(ctx context.Context) ([]entity.Lease, error)
 		Upsert(ctx context.Context, lease entity.Lease) error
 		DeleteByPropertyID(ctx context.Context, propertyID string) error
 	}
@@ -33,15 +34,21 @@ type (
 	ReadingRepo interface {
 		GetByPropertyID(ctx context.Context, propertyID string) ([]entity.Reading, error)
 		Store(ctx context.Context, reading entity.Reading) error
+		GetOldestUnaccounted(ctx context.Context, propertyID string) (entity.Reading, error)
+		GetLatestAccounted(ctx context.Context, propertyID string) (entity.Reading, error)
+		MarkAccounted(ctx context.Context, id string) error
 	}
 
 	BillRepo interface {
 		GetByPropertyID(ctx context.Context, propertyID string) ([]entity.Bill, error)
 		UpdateStatus(ctx context.Context, billID, propertyID, status string) error
+		GetLastByPropertyIDAndType(ctx context.Context, propertyID, billType string) (entity.Bill, error)
+		Store(ctx context.Context, bill entity.Bill) error
 	}
 
 	CustomNextItemRepo interface {
 		GetByPropertyID(ctx context.Context, propertyID string) ([]entity.CustomNextItem, error)
 		Store(ctx context.Context, item entity.CustomNextItem) error
+		DeleteByPropertyID(ctx context.Context, propertyID string) error
 	}
 )

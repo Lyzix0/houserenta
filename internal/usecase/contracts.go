@@ -28,6 +28,12 @@ type (
 		CreateCustomItem(ctx context.Context, propertyID, landlordID string, body request.CustomItem) error
 	}
 
+	// Billing performs the lazy, on-demand billing check triggered from hot routes
+	// (auth/me, properties) instead of an OS-level scheduler.
+	Billing interface {
+		Run(ctx context.Context) error
+	}
+
 	// UserProfile is the full session profile returned by the auth/me endpoint,
 	// enriched with the tenant's linked property when applicable.
 	UserProfile struct {

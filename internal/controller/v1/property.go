@@ -63,7 +63,7 @@ func (r *V1) createProperty(ctx fiber.Ctx) error {
 
 // getProperties godoc
 // @Summary      List properties
-// @Description  Protected. Returns the caller's properties with an automatic nested assembly of related entities (meter readings, bills with their line items, upcoming custom charges, lease/tenant info, landlord contact). Landlords see every property they own; tenants see the single property they lease, if any. The "applications" field is always empty: there is no applications/tickets subsystem implemented yet.
+// @Description  Protected. Returns the caller's properties with an automatic nested assembly of related entities (meter readings, bills with their line items, upcoming custom charges, lease/tenant info, landlord contact). Landlords see every property they own; tenants see the single property they lease, if any. The "applications" field is always empty: there is no applications/tickets subsystem implemented yet. Also triggers the lazy auto-billing check: for each active lease, if 30+ days have passed since its last rent bill (or none exists yet), a new bill is generated from the lease price, any queued custom charges, and unbilled utility consumption; a billing failure is logged and does not affect this response.
 // @Tags         properties
 // @Produce      json
 // @Security     CookieAuth
@@ -72,6 +72,8 @@ func (r *V1) createProperty(ctx fiber.Ctx) error {
 // @Failure      500  {object}  response.Error  "internal server error"
 // @Router       /properties [get]
 func (r *V1) getProperties(ctx fiber.Ctx) error {
+	r.runBillingCheck(ctx)
+
 	userID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
 	role, _ := ctx.Locals(middleware.UserRoleLocalsKey).(string)
 
@@ -383,4 +385,13 @@ func (r *V1) createCustomItem(ctx fiber.Ctx) error {
 	}
 
 	return ctx.Status(http.StatusOK).JSON(fiber.Map{"ok": true})
+}
+
+// runBillingCheck performs the lazy auto-billing pass. It is a passive side effect
+// of calling this route, not the route's own concern, so a failure here is logged
+// and swallowed rather than failing the request.
+func (r *V1) runBillingCheck(ctx fiber.Ctx) {
+	if err := r.billing.Run(ctx.Context()); err != nil {
+		r.l.Error("run billing check:", zap.Error(err))
+	}
 }
