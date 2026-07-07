@@ -8,9 +8,10 @@ import (
 )
 
 type V1 struct {
-	u    usecase.User
-	p    usecase.Property
-	l    *zap.Logger
-	v    *validator.Validate
-	sess *session.Store
+	u       usecase.User
+	p       usecase.Property
+	billing usecase.Billing
+	l       *zap.Logger
+	v       *validator.Validate
+	sess    *session.Store
 }

@@ -81,6 +81,40 @@ func (r *LeaseRepo) GetByPropertyID(
 	return lease, nil
 }
 
+func (r *LeaseRepo) GetAll(ctx context.Context) ([]entity.Lease, error) {
+	sql, args, err := r.Builder.
+		Select(leaseColumns...).
+		From("app.leases").
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("LeaseRepo - GetAll - r.Builder: %w", err)
+	}
+
+	rows, err := r.Pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("LeaseRepo - GetAll - r.Pool.Query: %w", err)
+	}
+	defer rows.Close()
+
+	leases := make([]entity.Lease, 0)
+	for rows.Next() {
+		var lease entity.Lease
+		if err := rows.Scan(
+			&lease.ID, &lease.PropertyID, &lease.TenantUserID, &lease.Name, &lease.Document, &lease.Phone,
+			&lease.MonthsOfRent, &lease.Price, &lease.PaymentDay, &lease.ReadingDay, &lease.StartDate, &lease.EndDate,
+		); err != nil {
+			return nil, fmt.Errorf("LeaseRepo - GetAll - rows.Scan: %w", err)
+		}
+		leases = append(leases, lease)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("LeaseRepo - GetAll - rows.Err: %w", err)
+	}
+
+	return leases, nil
+}
+
 // Upsert creates a lease for the property, or replaces the existing one (keeping its ID)
 // if the property already has an active lease, since app.leases.property_id is unique.
 func (r *LeaseRepo) Upsert(ctx context.Context, lease entity.Lease) error {

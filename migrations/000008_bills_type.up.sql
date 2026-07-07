@@ -1,0 +1,1 @@
+ALTER TABLE app.bills ADD COLUMN type TEXT NOT NULL DEFAULT 'rent';

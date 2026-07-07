@@ -288,6 +288,43 @@ func TestMe(t *testing.T) {
 			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusInternalServerError)
 		}
 	})
+
+	t.Run("triggers billing check but survives its failure", func(t *testing.T) {
+		var billingRan bool
+
+		u := &userUseCaseMock{
+			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
+				return entity.User{ID: "user-1", Email: email, Role: entity.RoleLandlord}, nil
+			},
+			meFn: func(_ context.Context, userID string) (usecase.UserProfile, error) {
+				return usecase.UserProfile{User: entity.User{ID: userID, Role: entity.RoleLandlord}}, nil
+			},
+		}
+		app := newTestAppWithBilling(u, &propertyUseCaseMock{}, &billingUseCaseMock{
+			runFn: func(context.Context) error {
+				billingRan = true
+				return errors.New("billing boom")
+			},
+		})
+
+		loginResp := doRequest(t, app, http.MethodPost, "/v1/auth/login", request.Login{Email: "john@example.com", Password: "password123"})
+		defer loginResp.Body.Close()
+
+		cookie := sessionCookie(loginResp)
+		if cookie == nil {
+			t.Fatal("expected session_id cookie from login")
+		}
+
+		resp := doRequest(t, app, http.MethodGet, "/v1/auth/me", nil, cookie)
+		defer resp.Body.Close()
+
+		if !billingRan {
+			t.Fatal("expected billing.Run to be called")
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("status = %d, want %d (billing failure must not break the response)", resp.StatusCode, http.StatusOK)
+		}
+	})
 }
 
 func TestProfile(t *testing.T) {

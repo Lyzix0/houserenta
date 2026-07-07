@@ -14,5 +14,6 @@ var (
 	ErrLeaseNotFound  = errors.New("lease not found")
 	ErrTenantNotFound = errors.New("tenant not found")
 
-	ErrBillNotFound = errors.New("bill not found")
+	ErrBillNotFound    = errors.New("bill not found")
+	ErrReadingNotFound = errors.New("reading not found")
 )

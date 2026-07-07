@@ -2,6 +2,7 @@ package v1_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -13,10 +14,25 @@ import (
 	"github.com/potom_pridumaem/internal/usecase"
 )
 
+type billingUseCaseMock struct {
+	runFn func(ctx context.Context) error
+}
+
+func (m *billingUseCaseMock) Run(ctx context.Context) error {
+	if m.runFn == nil {
+		return nil
+	}
+	return m.runFn(ctx)
+}
+
 func newTestApp(u usecase.User, p usecase.Property) *fiber.App {
+	return newTestAppWithBilling(u, p, &billingUseCaseMock{})
+}
+
+func newTestAppWithBilling(u usecase.User, p usecase.Property, b usecase.Billing) *fiber.App {
 	app := fiber.New()
 	apiV1Group := app.Group("/v1")
-	v1.NewRoutes(apiV1Group, u, p, zap.NewNop())
+	v1.NewRoutes(apiV1Group, u, p, b, zap.NewNop())
 
 	return app
 }
