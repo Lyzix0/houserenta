@@ -14,7 +14,6 @@ import (
 
 func TestCreateProperty(t *testing.T) {
 	validBody := request.Property{
-		LandlordID:  "landlord-1",
 		Name:        "Sunny Apartment",
 		Coordinates: "55.75,37.61",
 		Region:      "Moscow",
@@ -27,30 +26,60 @@ func TestCreateProperty(t *testing.T) {
 		El1Tariff:   4.5,
 	}
 
+	t.Run("unauthenticated", func(t *testing.T) {
+		app := newTestApp(&userUseCaseMock{}, &propertyUseCaseMock{})
+
+		resp := doRequest(t, app, http.MethodPost, "/v1/properties/", validBody)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusUnauthorized)
+		}
+	})
+
+	t.Run("forbidden for non-landlord", func(t *testing.T) {
+		app := newTestApp(&userUseCaseMock{
+			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
+				return entity.User{ID: "tenant-1", Email: email, Role: entity.RoleTenant}, nil
+			},
+		}, &propertyUseCaseMock{})
+
+		cookie := loginAndGetCookie(t, app)
+
+		resp := doRequest(t, app, http.MethodPost, "/v1/properties/", validBody, cookie)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusForbidden {
+			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusForbidden)
+		}
+	})
+
 	tests := []struct {
 		name             string
 		body             any
-		createPropertyFn func(ctx context.Context, body request.Property) (entity.Property, error)
+		createPropertyFn func(ctx context.Context, landlordID string, body request.Property) (entity.Property, error)
 		wantStatus       int
 	}{
 		{
 			name: "success",
 			body: validBody,
-			createPropertyFn: func(_ context.Context, body request.Property) (entity.Property, error) {
-				return entity.Property{ID: "prop-1", LandlordID: body.LandlordID, Name: body.Name}, nil
+			createPropertyFn: func(_ context.Context, landlordID string, body request.Property) (entity.Property, error) {
+				return entity.Property{ID: "prop-1", LandlordID: landlordID, Name: body.Name}, nil
 			},
-			wantStatus: http.StatusCreated,
+			wantStatus: http.StatusOK,
 		},
 		{
-			name:             "invalid body",
-			body:             map[string]string{"name": "missing required fields"},
-			createPropertyFn: func(context.Context, request.Property) (entity.Property, error) { return entity.Property{}, nil },
-			wantStatus:       http.StatusBadRequest,
+			name: "invalid body",
+			body: map[string]string{"name": "missing required fields"},
+			createPropertyFn: func(context.Context, string, request.Property) (entity.Property, error) {
+				return entity.Property{}, nil
+			},
+			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name: "landlord not found",
 			body: validBody,
-			createPropertyFn: func(context.Context, request.Property) (entity.Property, error) {
+			createPropertyFn: func(context.Context, string, request.Property) (entity.Property, error) {
 				return entity.Property{}, repo.ErrLandlordNotFound
 			},
 			wantStatus: http.StatusNotFound,
@@ -58,7 +87,7 @@ func TestCreateProperty(t *testing.T) {
 		{
 			name: "property already exists",
 			body: validBody,
-			createPropertyFn: func(context.Context, request.Property) (entity.Property, error) {
+			createPropertyFn: func(context.Context, string, request.Property) (entity.Property, error) {
 				return entity.Property{}, repo.ErrPropertyAlreadyExists
 			},
 			wantStatus: http.StatusConflict,
@@ -66,7 +95,7 @@ func TestCreateProperty(t *testing.T) {
 		{
 			name: "internal error",
 			body: validBody,
-			createPropertyFn: func(context.Context, request.Property) (entity.Property, error) {
+			createPropertyFn: func(context.Context, string, request.Property) (entity.Property, error) {
 				return entity.Property{}, errors.New("boom")
 			},
 			wantStatus: http.StatusInternalServerError,
@@ -75,9 +104,15 @@ func TestCreateProperty(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			app := newTestApp(&userUseCaseMock{}, &propertyUseCaseMock{createPropertyFn: tt.createPropertyFn})
+			app := newTestApp(&userUseCaseMock{
+				loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
+					return entity.User{ID: "landlord-1", Email: email, Role: entity.RoleLandlord}, nil
+				},
+			}, &propertyUseCaseMock{createPropertyFn: tt.createPropertyFn})
 
-			resp := doRequest(t, app, http.MethodPost, "/v1/properties/property", tt.body)
+			cookie := loginAndGetCookie(t, app)
+
+			resp := doRequest(t, app, http.MethodPost, "/v1/properties/", tt.body, cookie)
 			defer resp.Body.Close()
 
 			if resp.StatusCode != tt.wantStatus {
@@ -99,24 +134,29 @@ func TestGetProperties(t *testing.T) {
 		}
 	})
 
-	t.Run("authenticated", func(t *testing.T) {
+	t.Run("authenticated landlord", func(t *testing.T) {
 		app := newTestApp(&userUseCaseMock{
 			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
 				return entity.User{ID: "landlord-1", Email: email, Role: entity.RoleLandlord}, nil
 			},
 		}, &propertyUseCaseMock{
-			getPropertiesFn: func(_ context.Context, landlordID string) ([]entity.Property, error) {
-				return []entity.Property{{ID: "prop-1", LandlordID: landlordID, Name: "Sunny Apartment"}}, nil
+			getPropertiesFn: func(_ context.Context, userID string, role entity.Role) ([]entity.PropertyDetail, error) {
+				if role != entity.RoleLandlord {
+					t.Fatalf("role = %q, want %q", role, entity.RoleLandlord)
+				}
+				return []entity.PropertyDetail{
+					{
+						Property:        entity.Property{ID: "prop-1", LandlordID: userID, Name: "Sunny Apartment"},
+						Readings:        []entity.Reading{},
+						Bills:           []entity.Bill{},
+						CustomNextItems: []entity.CustomNextItem{},
+						Applications:    []any{},
+					},
+				}, nil
 			},
 		})
 
-		loginResp := doRequest(t, app, http.MethodPost, "/v1/auth/login", request.Login{Email: "john@example.com", Password: "password123"})
-		defer loginResp.Body.Close()
-
-		cookie := sessionCookie(loginResp)
-		if cookie == nil {
-			t.Fatal("expected session_id cookie from login")
-		}
+		cookie := loginAndGetCookie(t, app)
 
 		resp := doRequest(t, app, http.MethodGet, "/v1/properties/", nil, cookie)
 		defer resp.Body.Close()
@@ -125,11 +165,14 @@ func TestGetProperties(t *testing.T) {
 			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusOK)
 		}
 
-		var body []entity.Property
+		var body []entity.PropertyDetail
 		decodeJSON(t, resp, &body)
 
 		if len(body) != 1 || body[0].LandlordID != "landlord-1" {
 			t.Fatalf("body = %+v, want a single property for landlord-1", body)
+		}
+		if body[0].Tenant != nil {
+			t.Fatalf("tenant = %+v, want nil", body[0].Tenant)
 		}
 	})
 
@@ -139,18 +182,12 @@ func TestGetProperties(t *testing.T) {
 				return entity.User{ID: "landlord-1", Email: email, Role: entity.RoleLandlord}, nil
 			},
 		}, &propertyUseCaseMock{
-			getPropertiesFn: func(context.Context, string) ([]entity.Property, error) {
+			getPropertiesFn: func(context.Context, string, entity.Role) ([]entity.PropertyDetail, error) {
 				return nil, errors.New("boom")
 			},
 		})
 
-		loginResp := doRequest(t, app, http.MethodPost, "/v1/auth/login", request.Login{Email: "john@example.com", Password: "password123"})
-		defer loginResp.Body.Close()
-
-		cookie := sessionCookie(loginResp)
-		if cookie == nil {
-			t.Fatal("expected session_id cookie from login")
-		}
+		cookie := loginAndGetCookie(t, app)
 
 		resp := doRequest(t, app, http.MethodGet, "/v1/properties/", nil, cookie)
 		defer resp.Body.Close()
@@ -246,7 +283,6 @@ func TestGetProperty(t *testing.T) {
 
 func TestUpdateProperty(t *testing.T) {
 	validBody := request.Property{
-		LandlordID:  "landlord-1",
 		Name:        "Sunny Apartment",
 		Coordinates: "55.75,37.61",
 		Region:      "Moscow",

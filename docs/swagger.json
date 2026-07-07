@@ -233,7 +233,7 @@
                         "CookieAuth": []
                     }
                 ],
-                "description": "Returns all properties owned by the currently authenticated user, so a landlord can see their full property portfolio. Only properties the caller owns are returned; other landlords' properties are never exposed.",
+                "description": "Protected. Returns the caller's properties with an automatic nested assembly of related entities (meter readings, bills with their line items, upcoming custom charges, lease/tenant info, landlord contact). Landlords see every property they own; tenants see the single property they lease, if any. The \"applications\" field is always empty: there is no applications/tickets subsystem implemented yet.",
                 "produces": [
                     "application/json"
                 ],
@@ -247,7 +247,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/entity.Property"
+                                "$ref": "#/definitions/entity.PropertyDetail"
                             }
                         }
                     },
@@ -264,11 +264,14 @@
                         }
                     }
                 }
-            }
-        },
-        "/properties/property": {
+            },
             "post": {
-                "description": "Creates a new rental property for a landlord, registering its address and utility tariffs (hot/cold water, electricity) that will later be used for billing calculations. The new property starts with a zero balance.",
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Protected, Landlord only. Creates a new rental property owned by the authenticated landlord, registering its address and utility tariffs (hot/cold water, electricity) that will later be used for billing calculations. The new property starts with a zero balance.",
                 "consumes": [
                     "application/json"
                 ],
@@ -291,14 +294,20 @@
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.Property"
+                            "$ref": "#/definitions/response.PropertySummary"
                         }
                     },
                     "400": {
                         "description": "invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "not authenticated",
                         "schema": {
                             "$ref": "#/definitions/response.Error"
                         }
@@ -502,6 +511,140 @@
         }
     },
     "definitions": {
+        "entity.Bill": {
+            "description": "Счет на оплату аренды и коммунальных услуг.",
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-06-25T14:00:00.000Z"
+                },
+                "due_date": {
+                    "type": "string",
+                    "example": "2026-07-05T00:00:00.000Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "bill-999"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entity.BillItem"
+                    }
+                },
+                "property_id": {
+                    "type": "string",
+                    "example": "prop-z8y7x6w"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "unpaid"
+                },
+                "total": {
+                    "type": "number",
+                    "example": 35000
+                }
+            }
+        },
+        "entity.BillItem": {
+            "description": "Строка начисления в составе счета.",
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "example": 35000
+                },
+                "bill_id": {
+                    "type": "string",
+                    "example": "bill-999"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Аренда за период"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "item-1"
+                }
+            }
+        },
+        "entity.CustomNextItem": {
+            "description": "Разовое начисление, которое будет автоматически добавлено в следующий ежемесячный счет.",
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "example": 2500
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Ремонт сантехники"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "custom-1"
+                },
+                "property_id": {
+                    "type": "string",
+                    "example": "prop-z8y7x6w"
+                }
+            }
+        },
+        "entity.Lease": {
+            "description": "Договор аренды: юридическая связь между квартирой и конкретным жильцом.",
+            "type": "object",
+            "properties": {
+                "document": {
+                    "type": "string",
+                    "example": "Паспорт РФ 4512 № 345678"
+                },
+                "end_date": {
+                    "type": "string",
+                    "example": "2026-12-31"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "lease-1a2b3c4d"
+                },
+                "months_of_rent": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Иванов Иван Иванович"
+                },
+                "payment_day": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+79991112233"
+                },
+                "price": {
+                    "type": "number",
+                    "example": 45000
+                },
+                "property_id": {
+                    "type": "string",
+                    "example": "7c9e6b4a-4321-4a1b-8def-abcdef123456"
+                },
+                "reading_day": {
+                    "type": "integer",
+                    "example": 25
+                },
+                "start_date": {
+                    "type": "string",
+                    "example": "2026-01-01"
+                },
+                "tenant_user_id": {
+                    "type": "string",
+                    "example": "user-a9b8c7d"
+                }
+            }
+        },
         "entity.Property": {
             "type": "object",
             "properties": {
@@ -567,6 +710,143 @@
                 }
             }
         },
+        "entity.PropertyDetail": {
+            "description": "Объект недвижимости с автоматически собранными связанными сущностями: показаниями счетчиков, счетами, будущими начислениями, данными аренды и арендодателя.",
+            "type": "object",
+            "properties": {
+                "apartment": {
+                    "type": "string",
+                    "example": "45"
+                },
+                "applications": {
+                    "description": "Applications is always empty: there is no applications/tickets subsystem implemented yet.",
+                    "type": "array",
+                    "items": {}
+                },
+                "balance": {
+                    "type": "number",
+                    "example": 1250.75
+                },
+                "bills": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entity.Bill"
+                    }
+                },
+                "city": {
+                    "type": "string",
+                    "example": "Moscow"
+                },
+                "coordinates": {
+                    "type": "string",
+                    "example": "55.751244,37.618423"
+                },
+                "country": {
+                    "type": "string",
+                    "example": "Russia"
+                },
+                "customNextItems": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entity.CustomNextItem"
+                    }
+                },
+                "el1_tariff": {
+                    "type": "number",
+                    "example": 5.7
+                },
+                "el2_tariff": {
+                    "type": "number",
+                    "example": 4.9
+                },
+                "gvs_tariff": {
+                    "type": "number",
+                    "example": 189.5
+                },
+                "house": {
+                    "type": "string",
+                    "example": "12"
+                },
+                "hvs_tariff": {
+                    "type": "number",
+                    "example": 45.2
+                },
+                "id": {
+                    "type": "string",
+                    "example": "7c9e6b4a-4321-4a1b-8def-abcdef123456"
+                },
+                "landlordName": {
+                    "type": "string",
+                    "example": "Алексей Петров"
+                },
+                "landlordPhone": {
+                    "type": "string",
+                    "example": "+79001234567"
+                },
+                "landlord_id": {
+                    "type": "string",
+                    "example": "3f7e2b1a-1234-4c56-9abc-1234567890ab"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Sunny Apartment"
+                },
+                "readings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/entity.Reading"
+                    }
+                },
+                "region": {
+                    "type": "string",
+                    "example": "Moscow"
+                },
+                "street": {
+                    "type": "string",
+                    "example": "Tverskaya"
+                },
+                "tenant": {
+                    "$ref": "#/definitions/entity.Lease"
+                }
+            }
+        },
+        "entity.Reading": {
+            "description": "Показания приборов учета квартиры.",
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-06-25T12:00:00.000Z"
+                },
+                "el1": {
+                    "type": "number",
+                    "example": 340
+                },
+                "el2": {
+                    "type": "number"
+                },
+                "gvs": {
+                    "type": "number",
+                    "example": 12.5
+                },
+                "hvs": {
+                    "type": "number",
+                    "example": 24.1
+                },
+                "id": {
+                    "type": "string",
+                    "example": "read-123"
+                },
+                "is_accounted": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "property_id": {
+                    "type": "string",
+                    "example": "prop-z8y7x6w"
+                }
+            }
+        },
         "request.Login": {
             "type": "object",
             "required": [
@@ -622,11 +902,10 @@
                 "apartment",
                 "city",
                 "coordinates",
-                "el1_tariff",
-                "gvs_tariff",
+                "el1Tariff",
+                "gvsTariff",
                 "house",
-                "hvs_tariff",
-                "landlord_id",
+                "hvsTariff",
                 "name",
                 "region",
                 "street"
@@ -648,15 +927,15 @@
                     "type": "string",
                     "example": "Russia"
                 },
-                "el1_tariff": {
+                "el1Tariff": {
                     "type": "number",
                     "example": 5.7
                 },
-                "el2_tariff": {
+                "el2Tariff": {
                     "type": "number",
                     "example": 4.9
                 },
-                "gvs_tariff": {
+                "gvsTariff": {
                     "type": "number",
                     "example": 189.5
                 },
@@ -664,13 +943,9 @@
                     "type": "string",
                     "example": "12"
                 },
-                "hvs_tariff": {
+                "hvsTariff": {
                     "type": "number",
                     "example": 45.2
-                },
-                "landlord_id": {
-                    "type": "string",
-                    "example": "3f7e2b1a-1234-4c56-9abc-1234567890ab"
                 },
                 "name": {
                     "type": "string",
@@ -800,6 +1075,20 @@
                 "tenantPropertyId": {
                     "type": "string",
                     "example": "prop-z8y7x6w"
+                }
+            }
+        },
+        "response.PropertySummary": {
+            "description": "Краткая информация о только что созданном объекте недвижимости.",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "prop-k8r3f9d"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Студия у метро"
                 }
             }
         }

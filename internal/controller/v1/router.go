@@ -41,7 +41,7 @@ func NewRoutes(
 
 	propertyGroup := apiV1Group.Group("/properties")
 	{
-		propertyGroup.Post("/property", r.createProperty)
+		propertyGroup.Post("/", middleware.AuthRequired(sess), middleware.RoleRequired(string(entity.RoleLandlord)), r.createProperty)
 		propertyGroup.Get("/", middleware.AuthRequired(sess), r.getProperties)
 		propertyGroup.Get("/:id", middleware.AuthRequired(sess), r.getProperty)
 		propertyGroup.Put("/:id", middleware.AuthRequired(sess), middleware.RoleRequired(string(entity.RoleLandlord)), r.updateProperty)

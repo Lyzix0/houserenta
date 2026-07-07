@@ -16,8 +16,8 @@ type (
 	}
 
 	Property interface {
-		CreateProperty(ctx context.Context, body request.Property) (entity.Property, error)
-		GetProperties(ctx context.Context, landlordID string) ([]entity.Property, error)
+		CreateProperty(ctx context.Context, landlordID string, body request.Property) (entity.Property, error)
+		GetProperties(ctx context.Context, userID string, role entity.Role) ([]entity.PropertyDetail, error)
 		GetProperty(ctx context.Context, id, landlordID string) (entity.Property, error)
 		UpdateProperty(ctx context.Context, id, landlordID string, body request.Property) error
 		DeleteProperty(ctx context.Context, id, landlordID string) error

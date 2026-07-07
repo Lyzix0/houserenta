@@ -14,6 +14,6 @@ type Property struct {
 	GvsTariff   float64  `json:"gvs_tariff" example:"189.5"`
 	HvsTariff   float64  `json:"hvs_tariff" example:"45.2"`
 	El1Tariff   float64  `json:"el1_tariff" example:"5.7"`
-	El2Tariff   *float64 `json:"el2_tariff,omitempty" example:"4.9"`
+	El2Tariff   *float64 `json:"el2_tariff" example:"4.9"`
 	Balance     float64  `json:"balance" example:"1250.75"`
 }

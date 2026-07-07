@@ -32,19 +32,19 @@ func (m *userUseCaseMock) UpdateProfile(ctx context.Context, userID string, body
 }
 
 type propertyUseCaseMock struct {
-	createPropertyFn func(ctx context.Context, body request.Property) (entity.Property, error)
-	getPropertiesFn  func(ctx context.Context, landlordID string) ([]entity.Property, error)
+	createPropertyFn func(ctx context.Context, landlordID string, body request.Property) (entity.Property, error)
+	getPropertiesFn  func(ctx context.Context, userID string, role entity.Role) ([]entity.PropertyDetail, error)
 	getPropertyFn    func(ctx context.Context, id, landlordID string) (entity.Property, error)
 	updatePropertyFn func(ctx context.Context, id, landlordID string, body request.Property) error
 	deletePropertyFn func(ctx context.Context, id, landlordID string) error
 }
 
-func (m *propertyUseCaseMock) CreateProperty(ctx context.Context, body request.Property) (entity.Property, error) {
-	return m.createPropertyFn(ctx, body)
+func (m *propertyUseCaseMock) CreateProperty(ctx context.Context, landlordID string, body request.Property) (entity.Property, error) {
+	return m.createPropertyFn(ctx, landlordID, body)
 }
 
-func (m *propertyUseCaseMock) GetProperties(ctx context.Context, landlordID string) ([]entity.Property, error) {
-	return m.getPropertiesFn(ctx, landlordID)
+func (m *propertyUseCaseMock) GetProperties(ctx context.Context, userID string, role entity.Role) ([]entity.PropertyDetail, error) {
+	return m.getPropertiesFn(ctx, userID, role)
 }
 
 func (m *propertyUseCaseMock) GetProperty(ctx context.Context, id, landlordID string) (entity.Property, error) {
