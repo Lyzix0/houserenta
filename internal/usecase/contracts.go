@@ -22,4 +22,11 @@ type (
 		UpdateProperty(ctx context.Context, id, landlordID string, body request.Property) error
 		DeleteProperty(ctx context.Context, id, landlordID string) error
 	}
+
+	// UserProfile is the full session profile returned by the auth/me endpoint,
+	// enriched with the tenant's linked property when applicable.
+	UserProfile struct {
+		User             entity.User
+		TenantPropertyID *string
+	}
 )

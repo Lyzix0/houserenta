@@ -43,6 +43,22 @@ func NewConfig() (Config, error) {
 		return Config{}, fmt.Errorf("process envconfig: %w", err)
 	}
 
+	if len(config.HTTP.AllowedOrigins) == 0 {
+		return Config{}, fmt.Errorf(
+			"ALLOWED_ORIGINS must not be empty: an empty list is treated by fiber/cors as allowing all origins, " +
+				"which is incompatible with session cookies (CORS AllowCredentials) — list explicit origins instead",
+		)
+	}
+
+	for _, origin := range config.HTTP.AllowedOrigins {
+		if origin == "*" {
+			return Config{}, fmt.Errorf(
+				"ALLOWED_ORIGINS must not contain '*': the API authenticates via session cookies (CORS AllowCredentials), " +
+					"which browsers and fiber/cors both refuse to combine with a wildcard origin — list explicit origins instead",
+			)
+		}
+	}
+
 	config.PG.URL = fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable&connect_timeout=%d",
 		url.QueryEscape(config.PG.User),

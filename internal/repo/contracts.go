@@ -21,4 +21,8 @@ type (
 		Update(ctx context.Context, property entity.Property) error
 		Delete(ctx context.Context, id string) error
 	}
+
+	LeaseRepo interface {
+		GetByTenantUserID(ctx context.Context, tenantUserID string) (entity.Lease, error)
+	}
 )
