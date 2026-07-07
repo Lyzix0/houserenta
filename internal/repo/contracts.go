@@ -14,5 +14,9 @@ type (
 
 	PropertyRepo interface {
 		Store(ctx context.Context, property entity.Property) error
+		GetByLandlordID(ctx context.Context, landlordID string) ([]entity.Property, error)
+		GetByID(ctx context.Context, id string) (entity.Property, error)
+		Update(ctx context.Context, property entity.Property) error
+		Delete(ctx context.Context, id string) error
 	}
 )
