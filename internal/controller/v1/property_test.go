@@ -110,7 +110,13 @@ func TestGetProperties(t *testing.T) {
 			},
 		})
 
-		cookie := loginAndGetCookie(t, app)
+		loginResp := doRequest(t, app, http.MethodPost, "/v1/auth/login", request.Login{Email: "john@example.com", Password: "password123"})
+		defer loginResp.Body.Close()
+
+		cookie := sessionCookie(loginResp)
+		if cookie == nil {
+			t.Fatal("expected session_id cookie from login")
+		}
 
 		resp := doRequest(t, app, http.MethodGet, "/v1/properties/", nil, cookie)
 		defer resp.Body.Close()
@@ -138,7 +144,13 @@ func TestGetProperties(t *testing.T) {
 			},
 		})
 
-		cookie := loginAndGetCookie(t, app)
+		loginResp := doRequest(t, app, http.MethodPost, "/v1/auth/login", request.Login{Email: "john@example.com", Password: "password123"})
+		defer loginResp.Body.Close()
+
+		cookie := sessionCookie(loginResp)
+		if cookie == nil {
+			t.Fatal("expected session_id cookie from login")
+		}
 
 		resp := doRequest(t, app, http.MethodGet, "/v1/properties/", nil, cookie)
 		defer resp.Body.Close()

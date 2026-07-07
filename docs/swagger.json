@@ -266,9 +266,49 @@
                 }
             }
         },
+        "/properties": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Returns all properties owned by the currently authenticated user, so a landlord can see their full property portfolio. Only properties the caller owns are returned; other landlords' properties are never exposed.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "properties"
+                ],
+                "summary": "List properties",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entity.Property"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/properties/property": {
             "post": {
-                "description": "Creates a new rental property for a landlord",
+                "description": "Creates a new rental property for a landlord, registering its address and utility tariffs (hot/cold water, electricity) that will later be used for billing calculations. The new property starts with a zero balance.",
                 "consumes": [
                     "application/json"
                 ],

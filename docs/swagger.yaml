@@ -532,7 +532,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a new rental property for a landlord
+      description: Creates a new rental property for a landlord, registering its address
+        and utility tariffs (hot/cold water, electricity) that will later be used
+        for billing calculations. The new property starts with a zero balance.
       parameters:
       - description: Property data
         in: body

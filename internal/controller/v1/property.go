@@ -13,7 +13,7 @@ import (
 
 // createProperty godoc
 // @Summary      Create a property
-// @Description  Creates a new rental property for a landlord
+// @Description  Creates a new rental property for a landlord, registering its address and utility tariffs (hot/cold water, electricity) that will later be used for billing calculations. The new property starts with a zero balance.
 // @Tags         properties
 // @Accept       json
 // @Produce      json
