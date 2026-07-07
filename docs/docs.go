@@ -516,6 +516,79 @@ const docTemplate = `{
                 }
             }
         },
+        "/properties/{id}/custom-item": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Protected, Landlord only. Adds a one-off charge (e.g. cleaning, lock replacement) that will be folded into the property's next automatic bill.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "properties"
+                ],
+                "summary": "Add a one-off charge",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Property ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Charge data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.CustomItem"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "property not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/properties/{id}/lease": {
             "post": {
                 "security": [
@@ -619,6 +692,152 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "boolean"
                             }
+                        }
+                    },
+                    "401": {
+                        "description": "not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "property not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/properties/{id}/pay": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Protected. Either settles a specific bill (status becomes \"paid\") when billId is provided, or tops up the property's general balance otherwise.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "properties"
+                ],
+                "summary": "Make a payment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Property ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payment data",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.Payment"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "property not found, or bill not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/properties/{id}/readings": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Protected. Records a new meter reading for the property, submitted by the tenant currently leasing it or by the owning landlord.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "properties"
+                ],
+                "summary": "Submit a meter reading",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Property ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Meter reading",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.Reading"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
                         }
                     },
                     "401": {
@@ -980,6 +1199,23 @@ const docTemplate = `{
                 }
             }
         },
+        "request.CustomItem": {
+            "type": "object",
+            "required": [
+                "amount",
+                "description"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "example": 2500
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Замена смесителя на кухне"
+                }
+            }
+        },
         "request.Lease": {
             "type": "object",
             "required": [
@@ -1030,6 +1266,22 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "strongPass123"
+                }
+            }
+        },
+        "request.Payment": {
+            "type": "object",
+            "required": [
+                "amount"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "example": 35000
+                },
+                "billId": {
+                    "type": "string",
+                    "example": "bill-999"
                 }
             }
         },
@@ -1127,6 +1379,32 @@ const docTemplate = `{
                 "street": {
                     "type": "string",
                     "example": "Tverskaya"
+                }
+            }
+        },
+        "request.Reading": {
+            "type": "object",
+            "required": [
+                "el1",
+                "gvs",
+                "hvs"
+            ],
+            "properties": {
+                "el1": {
+                    "type": "number",
+                    "example": 395.5
+                },
+                "el2": {
+                    "type": "number",
+                    "example": 110.2
+                },
+                "gvs": {
+                    "type": "number",
+                    "example": 15.2
+                },
+                "hvs": {
+                    "type": "number",
+                    "example": 29.8
                 }
             }
         },

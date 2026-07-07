@@ -23,6 +23,9 @@ type (
 		DeleteProperty(ctx context.Context, id, landlordID string) error
 		CreateLease(ctx context.Context, propertyID, landlordID string, body request.Lease) error
 		DeleteLease(ctx context.Context, propertyID, landlordID string) error
+		CreateReading(ctx context.Context, propertyID, userID string, role entity.Role, body request.Reading) error
+		Pay(ctx context.Context, propertyID, userID string, role entity.Role, body request.Payment) error
+		CreateCustomItem(ctx context.Context, propertyID, landlordID string, body request.CustomItem) error
 	}
 
 	// UserProfile is the full session profile returned by the auth/me endpoint,

@@ -48,5 +48,8 @@ func NewRoutes(
 		propertyGroup.Delete("/:id", middleware.AuthRequired(sess), middleware.RoleRequired(string(entity.RoleLandlord)), r.deleteProperty)
 		propertyGroup.Post("/:id/lease", middleware.AuthRequired(sess), middleware.RoleRequired(string(entity.RoleLandlord)), r.createLease)
 		propertyGroup.Delete("/:id/lease", middleware.AuthRequired(sess), middleware.RoleRequired(string(entity.RoleLandlord)), r.deleteLease)
+		propertyGroup.Post("/:id/readings", middleware.AuthRequired(sess), r.createReading)
+		propertyGroup.Post("/:id/pay", middleware.AuthRequired(sess), r.pay)
+		propertyGroup.Post("/:id/custom-item", middleware.AuthRequired(sess), middleware.RoleRequired(string(entity.RoleLandlord)), r.createCustomItem)
 	}
 }

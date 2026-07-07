@@ -282,3 +282,108 @@ func (uc *UseCase) DeleteLease(ctx context.Context, propertyID, landlordID strin
 
 	return nil
 }
+
+// checkAccess verifies the caller may act on the property: the owning landlord,
+// or the tenant currently leasing it. Any other case is reported as not found,
+// consistent with how ownership failures are hidden elsewhere in this use case.
+func (uc *UseCase) checkAccess(ctx context.Context, propertyID, userID string, role entity.Role) (entity.Property, error) {
+	prop, err := uc.repo.GetByID(ctx, propertyID)
+	if err != nil {
+		return entity.Property{}, fmt.Errorf("PropertyUseCase - checkAccess - uc.repo.GetByID: %w", err)
+	}
+
+	switch role {
+	case entity.RoleLandlord:
+		if prop.LandlordID != userID {
+			return entity.Property{}, repo.ErrPropertyNotFound
+		}
+	case entity.RoleTenant:
+		lease, err := uc.leases.GetByPropertyID(ctx, propertyID)
+		switch {
+		case err == nil:
+			if lease.TenantUserID != userID {
+				return entity.Property{}, repo.ErrPropertyNotFound
+			}
+		case errors.Is(err, repo.ErrLeaseNotFound):
+			return entity.Property{}, repo.ErrPropertyNotFound
+		default:
+			return entity.Property{}, fmt.Errorf("PropertyUseCase - checkAccess - uc.leases.GetByPropertyID: %w", err)
+		}
+	default:
+		return entity.Property{}, repo.ErrPropertyNotFound
+	}
+
+	return prop, nil
+}
+
+// CreateReading records a new meter reading submitted by the tenant or the landlord.
+func (uc *UseCase) CreateReading(ctx context.Context, propertyID, userID string, role entity.Role, body request.Reading) error {
+	prop, err := uc.checkAccess(ctx, propertyID, userID, role)
+	if err != nil {
+		return err
+	}
+
+	reading := entity.Reading{
+		ID:          uuid.NewString(),
+		PropertyID:  prop.ID,
+		Date:        time.Now().UTC().Format(time.RFC3339),
+		Gvs:         body.Gvs,
+		Hvs:         body.Hvs,
+		El1:         body.El1,
+		El2:         body.El2,
+		IsAccounted: 0,
+	}
+
+	if err := uc.readings.Store(ctx, reading); err != nil {
+		return fmt.Errorf("PropertyUseCase - CreateReading - uc.readings.Store: %w", err)
+	}
+
+	return nil
+}
+
+// Pay either settles a specific bill (status -> paid) or tops up the property's
+// general balance, depending on whether BillID is provided.
+func (uc *UseCase) Pay(ctx context.Context, propertyID, userID string, role entity.Role, body request.Payment) error {
+	prop, err := uc.checkAccess(ctx, propertyID, userID, role)
+	if err != nil {
+		return err
+	}
+
+	if body.BillID != nil {
+		if err := uc.bills.UpdateStatus(ctx, *body.BillID, prop.ID, "paid"); err != nil {
+			return fmt.Errorf("PropertyUseCase - Pay - uc.bills.UpdateStatus: %w", err)
+		}
+		return nil
+	}
+
+	if err := uc.repo.AddBalance(ctx, prop.ID, body.Amount); err != nil {
+		return fmt.Errorf("PropertyUseCase - Pay - uc.repo.AddBalance: %w", err)
+	}
+
+	return nil
+}
+
+// CreateCustomItem adds a one-off charge that will be folded into the property's next bill.
+func (uc *UseCase) CreateCustomItem(ctx context.Context, propertyID, landlordID string, body request.CustomItem) error {
+	prop, err := uc.repo.GetByID(ctx, propertyID)
+	if err != nil {
+		return fmt.Errorf("PropertyUseCase - CreateCustomItem - uc.repo.GetByID: %w", err)
+	}
+
+	if prop.LandlordID != landlordID {
+		return repo.ErrPropertyNotFound
+	}
+
+	item := entity.CustomNextItem{
+		ID:          uuid.NewString(),
+		PropertyID:  prop.ID,
+		Description: body.Description,
+		Amount:      body.Amount,
+	}
+
+	if err := uc.customItems.Store(ctx, item); err != nil {
+		return fmt.Errorf("PropertyUseCase - CreateCustomItem - uc.customItems.Store: %w", err)
+	}
+
+	return nil
+}

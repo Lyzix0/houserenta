@@ -32,13 +32,16 @@ func (m *userUseCaseMock) UpdateProfile(ctx context.Context, userID string, body
 }
 
 type propertyUseCaseMock struct {
-	createPropertyFn func(ctx context.Context, landlordID string, body request.Property) (entity.Property, error)
-	getPropertiesFn  func(ctx context.Context, userID string, role entity.Role) ([]entity.PropertyDetail, error)
-	getPropertyFn    func(ctx context.Context, id, landlordID string) (entity.Property, error)
-	updatePropertyFn func(ctx context.Context, id, landlordID string, body request.Property) error
-	deletePropertyFn func(ctx context.Context, id, landlordID string) error
-	createLeaseFn    func(ctx context.Context, propertyID, landlordID string, body request.Lease) error
-	deleteLeaseFn    func(ctx context.Context, propertyID, landlordID string) error
+	createPropertyFn   func(ctx context.Context, landlordID string, body request.Property) (entity.Property, error)
+	getPropertiesFn    func(ctx context.Context, userID string, role entity.Role) ([]entity.PropertyDetail, error)
+	getPropertyFn      func(ctx context.Context, id, landlordID string) (entity.Property, error)
+	updatePropertyFn   func(ctx context.Context, id, landlordID string, body request.Property) error
+	deletePropertyFn   func(ctx context.Context, id, landlordID string) error
+	createLeaseFn      func(ctx context.Context, propertyID, landlordID string, body request.Lease) error
+	deleteLeaseFn      func(ctx context.Context, propertyID, landlordID string) error
+	createReadingFn    func(ctx context.Context, propertyID, userID string, role entity.Role, body request.Reading) error
+	payFn              func(ctx context.Context, propertyID, userID string, role entity.Role, body request.Payment) error
+	createCustomItemFn func(ctx context.Context, propertyID, landlordID string, body request.CustomItem) error
 }
 
 func (m *propertyUseCaseMock) CreateProperty(ctx context.Context, landlordID string, body request.Property) (entity.Property, error) {
@@ -67,4 +70,16 @@ func (m *propertyUseCaseMock) CreateLease(ctx context.Context, propertyID, landl
 
 func (m *propertyUseCaseMock) DeleteLease(ctx context.Context, propertyID, landlordID string) error {
 	return m.deleteLeaseFn(ctx, propertyID, landlordID)
+}
+
+func (m *propertyUseCaseMock) CreateReading(ctx context.Context, propertyID, userID string, role entity.Role, body request.Reading) error {
+	return m.createReadingFn(ctx, propertyID, userID, role, body)
+}
+
+func (m *propertyUseCaseMock) Pay(ctx context.Context, propertyID, userID string, role entity.Role, body request.Payment) error {
+	return m.payFn(ctx, propertyID, userID, role, body)
+}
+
+func (m *propertyUseCaseMock) CreateCustomItem(ctx context.Context, propertyID, landlordID string, body request.CustomItem) error {
+	return m.createCustomItemFn(ctx, propertyID, landlordID, body)
 }
