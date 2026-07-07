@@ -18,14 +18,20 @@ type useCases struct {
 	property *property.UseCase
 }
 
-func initUseCases(pg *postgres.Postgres) useCases {
+type repos struct {
+	property *persistent.PropertyRepo
+}
+
+func initDeps(pg *postgres.Postgres) (useCases, repos) {
 	userRepo := persistent.NewUserRepo(pg)
 	propertyRepo := persistent.NewPropertyRepo(pg)
 
 	return useCases{
-		user:     user.New(userRepo),
-		property: property.New(propertyRepo),
-	}
+			user:     user.New(userRepo),
+			property: property.New(propertyRepo),
+		}, repos{
+			property: propertyRepo,
+		}
 }
 
 func Run(cfg *config.Config) {
@@ -40,11 +46,11 @@ func Run(cfg *config.Config) {
 	}
 	defer pg.Close()
 
-	uc := initUseCases(pg)
+	uc, rp := initDeps(pg)
 
-	httpServer := httpserver.NewServer(lgr.Logger, httpserver.AllowOrigins(cfg.HTTP.AllowedOrigins))
+	httpServer := httpserver.NewServer(lgr.Logger)
 
-	restapi.NewRouter(httpServer.App, cfg, uc.user, uc.property, lgr.Logger)
+	restapi.NewRouter(httpServer.App, cfg, uc.user, uc.property, rp.property, lgr.Logger)
 
 	httpServer.Start()
 	httpServer.WaitForShutdown(*lgr.Logger)

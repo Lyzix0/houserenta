@@ -69,3 +69,69 @@ func (uc *UseCase) Login(ctx context.Context, email, password string) (entity.Us
 
 	return user, nil
 }
+
+func (uc *UseCase) GetByID(ctx context.Context, id string) (entity.User, error) {
+	return uc.repo.GetByID(ctx, id)
+}
+
+func (uc *UseCase) GetByEmail(ctx context.Context, email string) (entity.User, error) {
+	return uc.repo.GetByEmail(ctx, email)
+}
+
+func (uc *UseCase) UpdateProfile(ctx context.Context, id string, name, document, phone, email *string, paymentCard *string) error {
+	user, err := uc.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if name != nil && *name != "" {
+		user.Name = *name
+	}
+	if document != nil && *document != "" {
+		user.Document = *document
+	}
+	if phone != nil && *phone != "" {
+		user.Phone = *phone
+	}
+	if email != nil && *email != "" {
+		user.Email = *email
+	}
+	if paymentCard != nil {
+		if *paymentCard == "" {
+			user.PaymentCard = nil
+		} else {
+			user.PaymentCard = paymentCard
+		}
+	}
+	return uc.repo.Update(ctx, &user)
+}
+
+func (uc *UseCase) ChangePassword(ctx context.Context, id, oldPassword, newPassword string) error {
+	user, err := uc.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
+		return usecase.ErrInvalidCredentials
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	return uc.repo.UpdatePassword(ctx, id, string(hash))
+}
+
+func (uc *UseCase) SwitchRole(ctx context.Context, id, targetRole string) (entity.User, error) {
+	r := entity.Role(targetRole)
+	if r != entity.RoleLandlord && r != entity.RoleTenant && r != entity.RoleAdmin {
+		return entity.User{}, entity.ErrInvalidRole
+	}
+	user, err := uc.repo.GetByID(ctx, id)
+	if err != nil {
+		return entity.User{}, err
+	}
+	user.Role = r
+	if err := uc.repo.Update(ctx, &user); err != nil {
+		return entity.User{}, err
+	}
+	return user, nil
+}

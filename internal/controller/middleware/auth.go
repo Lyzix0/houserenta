@@ -33,17 +33,3 @@ func AuthRequired(store *session.Store) fiber.Handler {
 		return ctx.Next()
 	}
 }
-
-func RoleRequired(roles ...string) fiber.Handler {
-	return func(ctx fiber.Ctx) error {
-		role, _ := ctx.Locals(UserRoleLocalsKey).(string)
-
-		for _, r := range roles {
-			if role == r {
-				return ctx.Next()
-			}
-		}
-
-		return ctx.Status(http.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
-	}
-}
