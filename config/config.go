@@ -12,6 +12,7 @@ type (
 	Config struct {
 		Logger logger
 		PG     pg
+		HTTP   http
 	}
 	pg struct {
 		User     string        `envconfig:"POSTGRES_USER" required:"true"`
@@ -28,6 +29,10 @@ type (
 	logger struct {
 		Level  string `envconfig:"LOGGER_LEVEL" default:"DEBUG"`
 		Folder string `envconfig:"LOGGER_FOLDER" required:"true"`
+	}
+
+	http struct {
+		AllowedOrigins []string `envconfig:"ALLOWED_ORIGINS" default:"http://localhost:3000,http://localhost:5050"`
 	}
 )
 

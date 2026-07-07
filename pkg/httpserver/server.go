@@ -24,6 +24,8 @@ const (
 	_defaultShutdownTimeout = 3 * time.Second
 )
 
+var _defaultAllowOrigins = []string{"http://localhost:3000", "http://localhost:5050"}
+
 type Option func(*Server)
 
 type Server struct {
@@ -37,11 +39,12 @@ type Server struct {
 	readTimeout     time.Duration
 	writeTimeout    time.Duration
 	shutdownTimeout time.Duration
+	allowOrigins    []string
 
 	logger *zap.Logger
 }
 
-func NewServer(l *zap.Logger) *Server {
+func NewServer(l *zap.Logger, opts ...Option) *Server {
 	group, ctx := errgroup.WithContext(context.Background())
 	group.SetLimit(1)
 
@@ -53,7 +56,12 @@ func NewServer(l *zap.Logger) *Server {
 		readTimeout:     _defaultReadTimeout,
 		writeTimeout:    _defaultWriteTimeout,
 		shutdownTimeout: _defaultShutdownTimeout,
+		allowOrigins:    _defaultAllowOrigins,
 		logger:          l,
+	}
+
+	for _, opt := range opts {
+		opt(s)
 	}
 
 	app := fiber.New(fiber.Config{
@@ -65,7 +73,7 @@ func NewServer(l *zap.Logger) *Server {
 
 	// настройка cors
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:5050"},
+		AllowOrigins:     s.allowOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,

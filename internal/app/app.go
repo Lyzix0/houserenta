@@ -42,7 +42,7 @@ func Run(cfg *config.Config) {
 
 	uc := initUseCases(pg)
 
-	httpServer := httpserver.NewServer(lgr.Logger)
+	httpServer := httpserver.NewServer(lgr.Logger, httpserver.AllowOrigins(cfg.HTTP.AllowedOrigins))
 
 	restapi.NewRouter(httpServer.App, cfg, uc.user, uc.property, lgr.Logger)
 
