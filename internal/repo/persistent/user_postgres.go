@@ -95,3 +95,73 @@ func (r *UserRepo) GetByEmail(
 
 	return u, nil
 }
+
+func (r *UserRepo) GetByID(
+	ctx context.Context,
+	id string,
+) (entity.User, error) {
+	sql, args, err := r.Builder.
+		Select("id, name, email, password_hash, role, document, phone, payment_card").
+		From("app.users").
+		Where("id = ?", id).
+		ToSql()
+	if err != nil {
+		return entity.User{}, fmt.Errorf("UserRepo - GetByID - r.Builder: %w", err)
+	}
+
+	var u entity.User
+	err = r.Pool.QueryRow(ctx, sql, args...).Scan(
+		&u.ID,
+		&u.Name,
+		&u.Email,
+		&u.PasswordHash,
+		&u.Role,
+		&u.Document,
+		&u.Phone,
+		&u.PaymentCard,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.User{}, repo.ErrUserNotFound
+		}
+		return entity.User{}, fmt.Errorf("UserRepo - GetByID - r.Pool.QueryRow: %w", err)
+	}
+
+	return u, nil
+}
+
+func (r *UserRepo) Update(ctx context.Context, user *entity.User) error {
+	sql, args, err := r.Builder.
+		Update("app.users").
+		Set("name", user.Name).
+		Set("email", user.Email).
+		Set("password_hash", user.PasswordHash).
+		Set("role", user.Role).
+		Set("document", user.Document).
+		Set("phone", user.Phone).
+		Set("payment_card", user.PaymentCard).
+		Where("id = ?", user.ID).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("UserRepo - Update - r.Builder: %w", err)
+	}
+	_, err = r.Pool.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("UserRepo - Update - r.Pool.Exec: %w", err)
+	}
+	return nil
+}
+
+func (r *UserRepo) UpdatePassword(ctx context.Context, userID, hash string) error {
+	sql, args, err := r.Builder.
+		Update("app.users").
+		Set("password_hash", hash).
+		Where("id = ?", userID).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("UserRepo - UpdatePassword: %w", err)
+	}
+	_, err = r.Pool.Exec(ctx, sql, args...)
+	return err
+}
