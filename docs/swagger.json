@@ -10,7 +10,7 @@
     "paths": {
         "/auth/login": {
             "post": {
-                "description": "Authenticates a user by email and password, and creates a session",
+                "description": "Authenticates a user by email or phone and password, and creates a session",
                 "consumes": [
                     "application/json"
                 ],
@@ -36,17 +36,11 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.User"
+                            "$ref": "#/definitions/response.AuthUser"
                         }
                     },
                     "400": {
-                        "description": "invalid request body",
-                        "schema": {
-                            "$ref": "#/definitions/response.Error"
-                        }
-                    },
-                    "401": {
-                        "description": "invalid credentials",
+                        "description": "invalid request body or credentials",
                         "schema": {
                             "$ref": "#/definitions/response.Error"
                         }
@@ -71,8 +65,14 @@
                 ],
                 "summary": "Log out a user",
                 "responses": {
-                    "204": {
-                        "description": "session terminated successfully"
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
                     },
                     "500": {
                         "description": "internal server error",
@@ -90,26 +90,89 @@
                         "CookieAuth": []
                     }
                 ],
-                "description": "Returns the user ID and role from the current session",
+                "description": "Protected. Returns the full profile of the authenticated user for the current session, including the linked property when the caller is a tenant. Per business requirements this should also trigger an autobilling check; note: autobilling is not implemented yet in this API version, so only profile data is returned for now.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "auth"
                 ],
-                "summary": "Current user",
+                "summary": "Current session",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Me"
+                        }
+                    },
+                    "401": {
+                        "description": "not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/profile": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Protected. Partially updates the authenticated user's personal data, including changing the password. Only the provided fields are changed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Update account settings",
+                "parameters": [
+                    {
+                        "description": "Profile fields to update",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.Profile"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "type": "string"
+                                "type": "boolean"
                             }
+                        }
+                    },
+                    "400": {
+                        "description": "invalid request body or email already registered",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
                         }
                     },
                     "401": {
                         "description": "not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
                         "schema": {
                             "$ref": "#/definitions/response.Error"
                         }
@@ -119,7 +182,7 @@
         },
         "/auth/register": {
             "post": {
-                "description": "Creates a new user (landlord, tenant, or admin)",
+                "description": "Creates a new user (landlord or tenant) and immediately logs them in, setting the session cookie",
                 "consumes": [
                     "application/json"
                 ],
@@ -142,20 +205,54 @@
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.User"
+                            "$ref": "#/definitions/response.AuthUser"
                         }
                     },
                     "400": {
-                        "description": "invalid request body or role",
+                        "description": "invalid request body, invalid role, or email already registered",
                         "schema": {
                             "$ref": "#/definitions/response.Error"
                         }
                     },
-                    "409": {
-                        "description": "user already exists",
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/properties": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Returns all properties owned by the currently authenticated user, so a landlord can see their full property portfolio. Only properties the caller owns are returned; other landlords' properties are never exposed.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "properties"
+                ],
+                "summary": "List properties",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entity.Property"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "not authenticated",
                         "schema": {
                             "$ref": "#/definitions/response.Error"
                         }
@@ -510,57 +607,6 @@
                 }
             }
         },
-        "entity.Role": {
-            "type": "string",
-            "enum": [
-                "landlord",
-                "tenant",
-                "admin"
-            ],
-            "x-enum-varnames": [
-                "RoleLandlord",
-                "RoleTenant",
-                "RoleAdmin"
-            ]
-        },
-        "entity.User": {
-            "description": "Основная модель пользователя: арендодатель, арендатор или администратор.",
-            "type": "object",
-            "properties": {
-                "document": {
-                    "type": "string",
-                    "example": "4510 123456"
-                },
-                "email": {
-                    "type": "string",
-                    "example": "ivan.petrov@example.com"
-                },
-                "id": {
-                    "type": "string",
-                    "example": "3f7e2b1a-1234-4c56-9abc-1234567890ab"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Ivan Petrov"
-                },
-                "payment_card": {
-                    "type": "string",
-                    "example": "1234567812345678"
-                },
-                "phone": {
-                    "type": "string",
-                    "example": "+79161234567"
-                },
-                "role": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/entity.Role"
-                        }
-                    ],
-                    "example": "landlord"
-                }
-            }
-        },
         "request.Login": {
             "type": "object",
             "required": [
@@ -575,6 +621,38 @@
                 "password": {
                     "type": "string",
                     "example": "strongPass123"
+                }
+            }
+        },
+        "request.Profile": {
+            "type": "object",
+            "properties": {
+                "document": {
+                    "type": "string",
+                    "example": "4510 123456"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "newemail@example.com"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Ivan Kolesnikov"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "newSuperSecurePassword"
+                },
+                "paymentCard": {
+                    "type": "string",
+                    "example": "1111222233334444"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+79997776655"
                 }
             }
         },
@@ -651,12 +729,11 @@
         "request.Register": {
             "type": "object",
             "required": [
-                "document",
                 "email",
+                "initialRole",
                 "name",
                 "password",
-                "phone",
-                "role"
+                "phone"
             ],
             "properties": {
                 "document": {
@@ -666,6 +743,14 @@
                 "email": {
                     "type": "string",
                     "example": "ivan.petrov@example.com"
+                },
+                "initialRole": {
+                    "type": "string",
+                    "enum": [
+                        "landlord",
+                        "tenant"
+                    ],
+                    "example": "landlord"
                 },
                 "name": {
                     "type": "string",
@@ -678,22 +763,35 @@
                     "minLength": 6,
                     "example": "strongPass123"
                 },
-                "payment_card": {
+                "paymentCard": {
                     "type": "string",
                     "example": "1234567812345678"
                 },
                 "phone": {
                     "type": "string",
                     "example": "+79161234567"
+                }
+            }
+        },
+        "response.AuthUser": {
+            "description": "Краткая информация о пользователе, возвращаемая при регистрации и входе.",
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "ivanov@example.com"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "user-a9b8c7d"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Иванов Иван Иванович"
                 },
                 "role": {
                     "type": "string",
-                    "enum": [
-                        "landlord",
-                        "tenant",
-                        "admin"
-                    ],
-                    "example": "landlord"
+                    "example": "tenant"
                 }
             }
         },
@@ -704,6 +802,44 @@
                 "error": {
                     "type": "string",
                     "example": "invalid request body"
+                }
+            }
+        },
+        "response.Me": {
+            "description": "Полный профиль авторизованного пользователя текущей сессии.",
+            "type": "object",
+            "properties": {
+                "document": {
+                    "type": "string",
+                    "example": "Паспорт РФ 4512 № 345678"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "ivanov@example.com"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "user-a9b8c7d"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Иванов Иван Иванович"
+                },
+                "paymentCard": {
+                    "type": "string",
+                    "example": "4276111122223333"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+79991112233"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "tenant"
+                },
+                "tenantPropertyId": {
+                    "type": "string",
+                    "example": "prop-z8y7x6w"
                 }
             }
         }

@@ -36,6 +36,7 @@ func NewRoutes(
 		authGroup.Post("/register", r.register)
 		authGroup.Post("/logout", r.logout)
 		authGroup.Get("/me", middleware.AuthRequired(sess), r.me)
+		authGroup.Post("/profile", middleware.AuthRequired(sess), r.profile)
 	}
 
 	propertyGroup := apiV1Group.Group("/properties")

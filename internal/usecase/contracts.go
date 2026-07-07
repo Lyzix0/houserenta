@@ -9,8 +9,10 @@ import (
 
 type (
 	User interface {
-		Register(ctx context.Context, name, email, password, role, document, phone string) (entity.User, error)
-		Login(ctx context.Context, email, password string) (entity.User, error)
+		Register(ctx context.Context, name, email, password, role, document, phone string, paymentCard *string) (entity.User, error)
+		Login(ctx context.Context, identifier, password string) (entity.User, error)
+		Me(ctx context.Context, userID string) (UserProfile, error)
+		UpdateProfile(ctx context.Context, userID string, body request.Profile) error
 	}
 
 	Property interface {

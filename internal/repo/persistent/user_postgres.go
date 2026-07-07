@@ -13,6 +13,8 @@ import (
 	"github.com/potom_pridumaem/pkg/postgres"
 )
 
+const userColumns = "id, name, email, password_hash, role, document, phone, payment_card"
+
 type UserRepo struct {
 	*postgres.Postgres
 }
@@ -28,7 +30,7 @@ func (r *UserRepo) Store(ctx context.Context, user *entity.User) error {
 
 	sql, args, err := r.Builder.
 		Insert("app.users").
-		Columns("id, name, email, password_hash, role, document, phone, payment_card").
+		Columns(userColumns).
 		Values(
 			user.ID,
 			user.Name,
@@ -61,17 +63,17 @@ func (r *UserRepo) Store(ctx context.Context, user *entity.User) error {
 	return nil
 }
 
-func (r *UserRepo) GetByEmail(
+func (r *UserRepo) GetByEmailOrPhone(
 	ctx context.Context,
-	email string,
+	identifier string,
 ) (entity.User, error) {
 	sql, args, err := r.Builder.
-		Select("id, name, email, password_hash, role, document, phone, payment_card").
+		Select(userColumns).
 		From("app.users").
-		Where("email = ?", email).
+		Where("email = ? OR phone = ?", identifier, identifier).
 		ToSql()
 	if err != nil {
-		return entity.User{}, fmt.Errorf("UserRepo - GetByEmail - r.Builder: %w", err)
+		return entity.User{}, fmt.Errorf("UserRepo - GetByEmailOrPhone - r.Builder: %w", err)
 	}
 
 	var u entity.User
@@ -90,8 +92,78 @@ func (r *UserRepo) GetByEmail(
 		if errors.Is(err, pgx.ErrNoRows) {
 			return entity.User{}, repo.ErrUserNotFound
 		}
-		return entity.User{}, fmt.Errorf("UserRepo - GetByEmail - r.Pool.QueryRow: %w", err)
+		return entity.User{}, fmt.Errorf("UserRepo - GetByEmailOrPhone - r.Pool.QueryRow: %w", err)
 	}
 
 	return u, nil
+}
+
+func (r *UserRepo) GetByID(
+	ctx context.Context,
+	id string,
+) (entity.User, error) {
+	sql, args, err := r.Builder.
+		Select(userColumns).
+		From("app.users").
+		Where("id = ?", id).
+		ToSql()
+	if err != nil {
+		return entity.User{}, fmt.Errorf("UserRepo - GetByID - r.Builder: %w", err)
+	}
+
+	var u entity.User
+	err = r.Pool.QueryRow(ctx, sql, args...).Scan(
+		&u.ID,
+		&u.Name,
+		&u.Email,
+		&u.PasswordHash,
+		&u.Role,
+		&u.Document,
+		&u.Phone,
+		&u.PaymentCard,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.User{}, repo.ErrUserNotFound
+		}
+		return entity.User{}, fmt.Errorf("UserRepo - GetByID - r.Pool.QueryRow: %w", err)
+	}
+
+	return u, nil
+}
+
+func (r *UserRepo) Update(ctx context.Context, user *entity.User) error {
+	if err := user.Validate(); err != nil {
+		return fmt.Errorf("UserRepo - Update - user.Validate: %w", err)
+	}
+
+	sql, args, err := r.Builder.
+		Update("app.users").
+		Set("name", user.Name).
+		Set("email", user.Email).
+		Set("password_hash", user.PasswordHash).
+		Set("document", user.Document).
+		Set("phone", user.Phone).
+		Set("payment_card", user.PaymentCard).
+		Where("id = ?", user.ID).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("UserRepo - Update - r.Builder: %w", err)
+	}
+
+	tag, err := r.Pool.Exec(ctx, sql, args...)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return repo.ErrEmailAlreadyTaken
+		}
+		return fmt.Errorf("UserRepo - Update - r.Pool.Exec: %w", err)
+	}
+
+	if tag.RowsAffected() == 0 {
+		return repo.ErrUserNotFound
+	}
+
+	return nil
 }

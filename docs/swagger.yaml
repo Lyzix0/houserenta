@@ -48,42 +48,6 @@ definitions:
         example: Tverskaya
         type: string
     type: object
-  entity.Role:
-    enum:
-    - landlord
-    - tenant
-    - admin
-    type: string
-    x-enum-varnames:
-    - RoleLandlord
-    - RoleTenant
-    - RoleAdmin
-  entity.User:
-    description: 'Основная модель пользователя: арендодатель, арендатор или администратор.'
-    properties:
-      document:
-        example: 4510 123456
-        type: string
-      email:
-        example: ivan.petrov@example.com
-        type: string
-      id:
-        example: 3f7e2b1a-1234-4c56-9abc-1234567890ab
-        type: string
-      name:
-        example: Ivan Petrov
-        type: string
-      payment_card:
-        example: "1234567812345678"
-        type: string
-      phone:
-        example: "+79161234567"
-        type: string
-      role:
-        allOf:
-        - $ref: '#/definitions/entity.Role'
-        example: landlord
-    type: object
   request.Login:
     properties:
       email:
@@ -95,6 +59,30 @@ definitions:
     required:
     - email
     - password
+    type: object
+  request.Profile:
+    properties:
+      document:
+        example: 4510 123456
+        type: string
+      email:
+        example: newemail@example.com
+        type: string
+      name:
+        example: Ivan Kolesnikov
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        example: newSuperSecurePassword
+        minLength: 6
+        type: string
+      paymentCard:
+        example: "1111222233334444"
+        type: string
+      phone:
+        example: "+79997776655"
+        type: string
     type: object
   request.Property:
     properties:
@@ -158,6 +146,12 @@ definitions:
       email:
         example: ivan.petrov@example.com
         type: string
+      initialRole:
+        enum:
+        - landlord
+        - tenant
+        example: landlord
+        type: string
       name:
         example: Ivan Petrov
         maxLength: 100
@@ -167,32 +161,69 @@ definitions:
         example: strongPass123
         minLength: 6
         type: string
-      payment_card:
+      paymentCard:
         example: "1234567812345678"
         type: string
       phone:
         example: "+79161234567"
         type: string
-      role:
-        enum:
-        - landlord
-        - tenant
-        - admin
-        example: landlord
-        type: string
     required:
-    - document
     - email
+    - initialRole
     - name
     - password
     - phone
-    - role
+    type: object
+  response.AuthUser:
+    description: Краткая информация о пользователе, возвращаемая при регистрации и
+      входе.
+    properties:
+      email:
+        example: ivanov@example.com
+        type: string
+      id:
+        example: user-a9b8c7d
+        type: string
+      name:
+        example: Иванов Иван Иванович
+        type: string
+      role:
+        example: tenant
+        type: string
     type: object
   response.Error:
     description: Стандартный формат ошибки API
     properties:
       error:
         example: invalid request body
+        type: string
+    type: object
+  response.Me:
+    description: Полный профиль авторизованного пользователя текущей сессии.
+    properties:
+      document:
+        example: Паспорт РФ 4512 № 345678
+        type: string
+      email:
+        example: ivanov@example.com
+        type: string
+      id:
+        example: user-a9b8c7d
+        type: string
+      name:
+        example: Иванов Иван Иванович
+        type: string
+      paymentCard:
+        example: "4276111122223333"
+        type: string
+      phone:
+        example: "+79991112233"
+        type: string
+      role:
+        example: tenant
+        type: string
+      tenantPropertyId:
+        example: prop-z8y7x6w
         type: string
     type: object
 info:
@@ -205,7 +236,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticates a user by email and password, and creates a session
+      description: Authenticates a user by email or phone and password, and creates
+        a session
       parameters:
       - description: Login data
         in: body
@@ -219,13 +251,9 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/entity.User'
+            $ref: '#/definitions/response.AuthUser'
         "400":
-          description: invalid request body
-          schema:
-            $ref: '#/definitions/response.Error'
-        "401":
-          description: invalid credentials
+          description: invalid request body or credentials
           schema:
             $ref: '#/definitions/response.Error'
         "500":
@@ -241,8 +269,12 @@ paths:
       produces:
       - application/json
       responses:
-        "204":
-          description: session terminated successfully
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
         "500":
           description: internal server error
           schema:
@@ -252,7 +284,44 @@ paths:
       - auth
   /auth/me:
     get:
-      description: Returns the user ID and role from the current session
+      description: 'Protected. Returns the full profile of the authenticated user
+        for the current session, including the linked property when the caller is
+        a tenant. Per business requirements this should also trigger an autobilling
+        check; note: autobilling is not implemented yet in this API version, so only
+        profile data is returned for now.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Me'
+        "401":
+          description: not authenticated
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      security:
+      - CookieAuth: []
+      summary: Current session
+      tags:
+      - auth
+  /auth/profile:
+    post:
+      consumes:
+      - application/json
+      description: Protected. Partially updates the authenticated user's personal
+        data, including changing the password. Only the provided fields are changed.
+      parameters:
+      - description: Profile fields to update
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/request.Profile'
       produces:
       - application/json
       responses:
@@ -260,22 +329,31 @@ paths:
           description: OK
           schema:
             additionalProperties:
-              type: string
+              type: boolean
             type: object
+        "400":
+          description: invalid request body or email already registered
+          schema:
+            $ref: '#/definitions/response.Error'
         "401":
           description: not authenticated
           schema:
             $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
       security:
       - CookieAuth: []
-      summary: Current user
+      summary: Update account settings
       tags:
       - auth
   /auth/register:
     post:
       consumes:
       - application/json
-      description: Creates a new user (landlord, tenant, or admin)
+      description: Creates a new user (landlord or tenant) and immediately logs them
+        in, setting the session cookie
       parameters:
       - description: Registration data
         in: body
@@ -286,16 +364,12 @@ paths:
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "200":
+          description: OK
           schema:
-            $ref: '#/definitions/entity.User'
+            $ref: '#/definitions/response.AuthUser'
         "400":
-          description: invalid request body or role
-          schema:
-            $ref: '#/definitions/response.Error'
-        "409":
-          description: user already exists
+          description: invalid request body, invalid role, or email already registered
           schema:
             $ref: '#/definitions/response.Error'
         "500":

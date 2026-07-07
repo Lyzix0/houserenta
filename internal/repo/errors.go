@@ -10,4 +10,6 @@ var (
 	ErrPropertyAlreadyExists = errors.New("property already exists")
 	ErrPropertyNotFound      = errors.New("property not found")
 	ErrLandlordNotFound      = errors.New("landlord not found")
+
+	ErrLeaseNotFound = errors.New("lease not found")
 )

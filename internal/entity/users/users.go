@@ -67,13 +67,6 @@ func (u *User) Validate() error {
 		)
 	}
 
-	if len([]rune(u.Document)) == 0 {
-		return fmt.Errorf(
-			"invalid `Document`: %w",
-			ErrInvalidDocument,
-		)
-	}
-
 	phoneLen := len([]rune(u.Phone))
 	if phoneLen < 10 || phoneLen > 15 {
 		return fmt.Errorf(
