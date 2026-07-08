@@ -12,6 +12,7 @@ type (
 		GetByEmailOrPhone(ctx context.Context, identifier string) (entity.User, error)
 		GetByID(ctx context.Context, id string) (entity.User, error)
 		Update(ctx context.Context, user *entity.User) error
+		GetUnlinkedTenants(ctx context.Context) ([]entity.User, error)
 	}
 
 	PropertyRepo interface {
@@ -21,6 +22,7 @@ type (
 		Update(ctx context.Context, property entity.Property) error
 		Delete(ctx context.Context, id string) error
 		AddBalance(ctx context.Context, propertyID string, amount float64) error
+		GetVacant(ctx context.Context) ([]entity.Property, error)
 	}
 
 	LeaseRepo interface {
@@ -49,6 +51,12 @@ type (
 	CustomNextItemRepo interface {
 		GetByPropertyID(ctx context.Context, propertyID string) ([]entity.CustomNextItem, error)
 		Store(ctx context.Context, item entity.CustomNextItem) error
+		DeleteByPropertyID(ctx context.Context, propertyID string) error
+	}
+
+	ApplicationRepo interface {
+		Store(ctx context.Context, application entity.Application) error
+		GetByPropertyID(ctx context.Context, propertyID string) ([]entity.Application, error)
 		DeleteByPropertyID(ctx context.Context, propertyID string) error
 	}
 )

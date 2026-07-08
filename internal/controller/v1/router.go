@@ -44,6 +44,7 @@ func NewRoutes(
 	{
 		propertyGroup.Post("/", middleware.AuthRequired(sess), middleware.RoleRequired(string(entity.RoleLandlord)), r.createProperty)
 		propertyGroup.Get("/", middleware.AuthRequired(sess), r.getProperties)
+		propertyGroup.Get("/vacant", middleware.AuthRequired(sess), r.getVacantProperties)
 		propertyGroup.Get("/:id", middleware.AuthRequired(sess), r.getProperty)
 		propertyGroup.Put("/:id", middleware.AuthRequired(sess), middleware.RoleRequired(string(entity.RoleLandlord)), r.updateProperty)
 		propertyGroup.Delete("/:id", middleware.AuthRequired(sess), middleware.RoleRequired(string(entity.RoleLandlord)), r.deleteProperty)
@@ -52,5 +53,11 @@ func NewRoutes(
 		propertyGroup.Post("/:id/readings", middleware.AuthRequired(sess), r.createReading)
 		propertyGroup.Post("/:id/pay", middleware.AuthRequired(sess), r.pay)
 		propertyGroup.Post("/:id/custom-item", middleware.AuthRequired(sess), middleware.RoleRequired(string(entity.RoleLandlord)), r.createCustomItem)
+		propertyGroup.Post("/:id/apply", middleware.AuthRequired(sess), middleware.RoleRequired(string(entity.RoleTenant)), r.applyToProperty)
+	}
+
+	tenantGroup := apiV1Group.Group("/tenants")
+	{
+		tenantGroup.Get("/unlinked", middleware.AuthRequired(sess), middleware.RoleRequired(string(entity.RoleLandlord)), r.getUnlinkedTenants)
 	}
 }

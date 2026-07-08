@@ -150,7 +150,7 @@ func TestGetProperties(t *testing.T) {
 						Readings:        []entity.Reading{},
 						Bills:           []entity.Bill{},
 						CustomNextItems: []entity.CustomNextItem{},
-						Applications:    []any{},
+						Applications:    []entity.Application{},
 					},
 				}, nil
 			},

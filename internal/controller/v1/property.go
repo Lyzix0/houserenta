@@ -395,3 +395,54 @@ func (r *V1) runBillingCheck(ctx fiber.Ctx) {
 		r.l.Error("run billing check:", zap.Error(err))
 	}
 }
+
+// getVacantProperties godoc
+// @Summary      Search vacant properties
+// @Description  Protected. Returns every property system-wide that currently has no lease bound to it, along with the applications submitted for each.
+// @Tags         properties
+// @Produce      json
+// @Security     CookieAuth
+// @Success      200  {array}   entity.PropertyDetail
+// @Failure      401  {object}  response.Error  "not authenticated"
+// @Failure      500  {object}  response.Error  "internal server error"
+// @Router       /properties/vacant [get]
+func (r *V1) getVacantProperties(ctx fiber.Ctx) error {
+	properties, err := r.p.GetVacantProperties(ctx.Context())
+	if err != nil {
+		r.l.Error("get vacant properties:", zap.Error(err))
+		return errorResponse(ctx, http.StatusInternalServerError, "failed to get vacant properties")
+	}
+
+	return ctx.Status(http.StatusOK).JSON(properties)
+}
+
+// applyToProperty godoc
+// @Summary      Apply for a property
+// @Description  Protected, Tenant only. Submits the caller's application to rent the given property.
+// @Tags         properties
+// @Produce      json
+// @Security     CookieAuth
+// @Param        id   path      string  true  "Property ID"
+// @Success      200  {object}  map[string]bool
+// @Failure      400  {object}  response.Error  "already applied to this property"
+// @Failure      401  {object}  response.Error  "not authenticated"
+// @Failure      404  {object}  response.Error  "property not found"
+// @Failure      500  {object}  response.Error  "internal server error"
+// @Router       /properties/{id}/apply [post]
+func (r *V1) applyToProperty(ctx fiber.Ctx) error {
+	tenantUserID, _ := ctx.Locals(middleware.UserIDLocalsKey).(string)
+
+	if err := r.p.Apply(ctx.Context(), ctx.Params("id"), tenantUserID); err != nil {
+		switch {
+		case errors.Is(err, repo.ErrPropertyNotFound):
+			return errorResponse(ctx, http.StatusNotFound, "property not found")
+		case errors.Is(err, repo.ErrApplicationAlreadyExists):
+			return errorResponse(ctx, http.StatusBadRequest, "Вы уже откликнулись на это предложение")
+		default:
+			r.l.Error("apply to property:", zap.Error(err))
+			return errorResponse(ctx, http.StatusInternalServerError, "failed to submit application")
+		}
+	}
+
+	return ctx.Status(http.StatusOK).JSON(fiber.Map{"ok": true})
+}

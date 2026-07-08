@@ -340,6 +340,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/properties/vacant": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Protected. Returns every property system-wide that currently has no lease bound to it, along with the applications submitted for each.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "properties"
+                ],
+                "summary": "Search vacant properties",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/entity.PropertyDetail"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    }
+                }
+            }
+        },
         "/properties/{id}": {
             "get": {
                 "security": [
@@ -493,6 +533,67 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "boolean"
                             }
+                        }
+                    },
+                    "401": {
+                        "description": "not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "property not found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/properties/{id}/apply": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Protected, Tenant only. Submits the caller's application to rent the given property.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "properties"
+                ],
+                "summary": "Apply for a property",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Property ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "already applied to this property",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
                         }
                     },
                     "401": {
@@ -860,9 +961,71 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/tenants/unlinked": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Protected, Landlord only. Returns registered tenants not currently bound to any property, for picking one when manually creating a lease.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tenants"
+                ],
+                "summary": "List unlinked tenants",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/response.TenantSummary"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Error"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "entity.Application": {
+            "description": "Отклик жильца на свободную квартиру.",
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-06-25T12:00:00.000Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "app-1a2b3c4d"
+                },
+                "property_id": {
+                    "type": "string",
+                    "example": "prop-z8y7x6w"
+                },
+                "tenant_user_id": {
+                    "type": "string",
+                    "example": "user-a9b8c7d"
+                }
+            }
+        },
         "entity.Bill": {
             "description": "Счет на оплату аренды и коммунальных услуг.",
             "type": "object",
@@ -1075,9 +1238,10 @@ const docTemplate = `{
                     "example": "45"
                 },
                 "applications": {
-                    "description": "Applications is always empty: there is no applications/tickets subsystem implemented yet.",
                     "type": "array",
-                    "items": {}
+                    "items": {
+                        "$ref": "#/definitions/entity.Application"
+                    }
                 },
                 "balance": {
                     "type": "number",
@@ -1540,6 +1704,32 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "Студия у метро"
+                }
+            }
+        },
+        "response.TenantSummary": {
+            "description": "Краткая информация о жильце, не привязанном ни к одной квартире.",
+            "type": "object",
+            "properties": {
+                "document": {
+                    "type": "string",
+                    "example": "Паспорт РФ 4512 № 345678"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "ivanov@example.com"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "user-a9b8c7d"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Иванов Иван Иванович"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+79991112233"
                 }
             }
         }

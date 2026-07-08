@@ -1,5 +1,21 @@
 basePath: /v1
 definitions:
+  entity.Application:
+    description: Отклик жильца на свободную квартиру.
+    properties:
+      date:
+        example: "2026-06-25T12:00:00.000Z"
+        type: string
+      id:
+        example: app-1a2b3c4d
+        type: string
+      property_id:
+        example: prop-z8y7x6w
+        type: string
+      tenant_user_id:
+        example: user-a9b8c7d
+        type: string
+    type: object
   entity.Bill:
     description: Счет на оплату аренды и коммунальных услуг.
     properties:
@@ -158,9 +174,8 @@ definitions:
         example: "45"
         type: string
       applications:
-        description: 'Applications is always empty: there is no applications/tickets
-          subsystem implemented yet.'
-        items: {}
+        items:
+          $ref: '#/definitions/entity.Application'
         type: array
       balance:
         example: 1250.75
@@ -504,6 +519,25 @@ definitions:
         type: string
       name:
         example: Студия у метро
+        type: string
+    type: object
+  response.TenantSummary:
+    description: Краткая информация о жильце, не привязанном ни к одной квартире.
+    properties:
+      document:
+        example: Паспорт РФ 4512 № 345678
+        type: string
+      email:
+        example: ivanov@example.com
+        type: string
+      id:
+        example: user-a9b8c7d
+        type: string
+      name:
+        example: Иванов Иван Иванович
+        type: string
+      phone:
+        example: "+79991112233"
         type: string
     type: object
 info:
@@ -858,6 +892,46 @@ paths:
       summary: Update a property
       tags:
       - properties
+  /properties/{id}/apply:
+    post:
+      description: Protected, Tenant only. Submits the caller's application to rent
+        the given property.
+      parameters:
+      - description: Property ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: already applied to this property
+          schema:
+            $ref: '#/definitions/response.Error'
+        "401":
+          description: not authenticated
+          schema:
+            $ref: '#/definitions/response.Error'
+        "404":
+          description: property not found
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      security:
+      - CookieAuth: []
+      summary: Apply for a property
+      tags:
+      - properties
   /properties/{id}/custom-item:
     post:
       consumes:
@@ -1089,6 +1163,58 @@ paths:
       summary: Submit a meter reading
       tags:
       - properties
+  /properties/vacant:
+    get:
+      description: Protected. Returns every property system-wide that currently has
+        no lease bound to it, along with the applications submitted for each.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/entity.PropertyDetail'
+            type: array
+        "401":
+          description: not authenticated
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      security:
+      - CookieAuth: []
+      summary: Search vacant properties
+      tags:
+      - properties
+  /tenants/unlinked:
+    get:
+      description: Protected, Landlord only. Returns registered tenants not currently
+        bound to any property, for picking one when manually creating a lease.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/response.TenantSummary'
+            type: array
+        "401":
+          description: not authenticated
+          schema:
+            $ref: '#/definitions/response.Error'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/response.Error'
+      security:
+      - CookieAuth: []
+      summary: List unlinked tenants
+      tags:
+      - tenants
 securityDefinitions:
   CookieAuth:
     description: Session cookie set on successful login

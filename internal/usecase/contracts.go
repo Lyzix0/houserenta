@@ -13,6 +13,7 @@ type (
 		Login(ctx context.Context, identifier, password string) (entity.User, error)
 		Me(ctx context.Context, userID string) (UserProfile, error)
 		UpdateProfile(ctx context.Context, userID string, body request.Profile) error
+		GetUnlinkedTenants(ctx context.Context) ([]entity.User, error)
 	}
 
 	Property interface {
@@ -26,6 +27,8 @@ type (
 		CreateReading(ctx context.Context, propertyID, userID string, role entity.Role, body request.Reading) error
 		Pay(ctx context.Context, propertyID, userID string, role entity.Role, body request.Payment) error
 		CreateCustomItem(ctx context.Context, propertyID, landlordID string, body request.CustomItem) error
+		GetVacantProperties(ctx context.Context) ([]entity.PropertyDetail, error)
+		Apply(ctx context.Context, propertyID, tenantUserID string) error
 	}
 
 	// Billing performs the lazy, on-demand billing check triggered from hot routes
