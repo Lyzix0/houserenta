@@ -137,3 +137,12 @@ func (uc *UseCase) Me(ctx context.Context, userID string) (usecase.UserProfile, 
 
 	return profile, nil
 }
+
+func (uc *UseCase) GetUnlinkedTenants(ctx context.Context) ([]entity.User, error) {
+	tenants, err := uc.repo.GetUnlinkedTenants(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("UserUseCase - GetUnlinkedTenants - uc.repo.GetUnlinkedTenants: %w", err)
+	}
+
+	return tenants, nil
+}

@@ -13,12 +13,13 @@ import (
 )
 
 type UseCase struct {
-	repo        repo.PropertyRepo
-	leases      repo.LeaseRepo
-	readings    repo.ReadingRepo
-	bills       repo.BillRepo
-	customItems repo.CustomNextItemRepo
-	users       repo.UserRepo
+	repo         repo.PropertyRepo
+	leases       repo.LeaseRepo
+	readings     repo.ReadingRepo
+	bills        repo.BillRepo
+	customItems  repo.CustomNextItemRepo
+	users        repo.UserRepo
+	applications repo.ApplicationRepo
 }
 
 func New(
@@ -28,14 +29,16 @@ func New(
 	bills repo.BillRepo,
 	customItems repo.CustomNextItemRepo,
 	users repo.UserRepo,
+	applications repo.ApplicationRepo,
 ) *UseCase {
 	return &UseCase{
-		repo:        r,
-		leases:      leases,
-		readings:    readings,
-		bills:       bills,
-		customItems: customItems,
-		users:       users,
+		repo:         r,
+		leases:       leases,
+		readings:     readings,
+		bills:        bills,
+		customItems:  customItems,
+		users:        users,
+		applications: applications,
 	}
 }
 
@@ -140,6 +143,11 @@ func (uc *UseCase) buildPropertyDetail(ctx context.Context, prop entity.Property
 		return entity.PropertyDetail{}, fmt.Errorf("PropertyUseCase - buildPropertyDetail - uc.users.GetByID: %w", err)
 	}
 
+	applications, err := uc.applications.GetByPropertyID(ctx, prop.ID)
+	if err != nil {
+		return entity.PropertyDetail{}, fmt.Errorf("PropertyUseCase - buildPropertyDetail - uc.applications.GetByPropertyID: %w", err)
+	}
+
 	return entity.PropertyDetail{
 		Property:        prop,
 		Readings:        readings,
@@ -148,7 +156,7 @@ func (uc *UseCase) buildPropertyDetail(ctx context.Context, prop entity.Property
 		Tenant:          tenant,
 		LandlordName:    landlord.Name,
 		LandlordPhone:   landlord.Phone,
-		Applications:    []any{},
+		Applications:    applications,
 	}, nil
 }
 
@@ -261,6 +269,11 @@ func (uc *UseCase) CreateLease(ctx context.Context, propertyID, landlordID strin
 
 	if err := uc.leases.Upsert(ctx, lease); err != nil {
 		return fmt.Errorf("PropertyUseCase - CreateLease - uc.leases.Upsert: %w", err)
+	}
+
+	// Moving a tenant in automatically invalidates any other pending applications for the unit.
+	if err := uc.applications.DeleteByPropertyID(ctx, propertyID); err != nil {
+		return fmt.Errorf("PropertyUseCase - CreateLease - uc.applications.DeleteByPropertyID: %w", err)
 	}
 
 	return nil
@@ -383,6 +396,46 @@ func (uc *UseCase) CreateCustomItem(ctx context.Context, propertyID, landlordID 
 
 	if err := uc.customItems.Store(ctx, item); err != nil {
 		return fmt.Errorf("PropertyUseCase - CreateCustomItem - uc.customItems.Store: %w", err)
+	}
+
+	return nil
+}
+
+// GetVacantProperties returns every property system-wide with no active lease,
+// along with the applications submitted for each.
+func (uc *UseCase) GetVacantProperties(ctx context.Context) ([]entity.PropertyDetail, error) {
+	props, err := uc.repo.GetVacant(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("PropertyUseCase - GetVacantProperties - uc.repo.GetVacant: %w", err)
+	}
+
+	details := make([]entity.PropertyDetail, 0, len(props))
+	for _, prop := range props {
+		detail, err := uc.buildPropertyDetail(ctx, prop)
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, detail)
+	}
+
+	return details, nil
+}
+
+// Apply submits a tenant's application for a vacant property.
+func (uc *UseCase) Apply(ctx context.Context, propertyID, tenantUserID string) error {
+	if _, err := uc.repo.GetByID(ctx, propertyID); err != nil {
+		return fmt.Errorf("PropertyUseCase - Apply - uc.repo.GetByID: %w", err)
+	}
+
+	app := entity.Application{
+		ID:           uuid.NewString(),
+		PropertyID:   propertyID,
+		TenantUserID: tenantUserID,
+		Date:         time.Now().UTC().Format(time.RFC3339),
+	}
+
+	if err := uc.applications.Store(ctx, app); err != nil {
+		return fmt.Errorf("PropertyUseCase - Apply - uc.applications.Store: %w", err)
 	}
 
 	return nil

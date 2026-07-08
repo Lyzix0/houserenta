@@ -37,6 +37,7 @@ func (m *propertyRepoMock) Delete(context.Context, string) error          { retu
 func (m *propertyRepoMock) AddBalance(ctx context.Context, propertyID string, amount float64) error {
 	return m.addBalanceFn(ctx, propertyID, amount)
 }
+func (m *propertyRepoMock) GetVacant(context.Context) ([]entity.Property, error) { return nil, nil }
 
 type billRepoMock struct {
 	getLastFn func(ctx context.Context, propertyID, billType string) (entity.Bill, error)

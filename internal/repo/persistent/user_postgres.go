@@ -167,3 +167,39 @@ func (r *UserRepo) Update(ctx context.Context, user *entity.User) error {
 
 	return nil
 }
+
+// GetUnlinkedTenants returns every tenant not currently bound to a lease,
+// so a landlord can pick one for manual move-in.
+func (r *UserRepo) GetUnlinkedTenants(ctx context.Context) ([]entity.User, error) {
+	sql, args, err := r.Builder.
+		Select(userColumns).
+		From("app.users").
+		Where("role = 'tenant' AND id NOT IN (SELECT tenant_user_id FROM app.leases)").
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("UserRepo - GetUnlinkedTenants - r.Builder: %w", err)
+	}
+
+	rows, err := r.Pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("UserRepo - GetUnlinkedTenants - r.Pool.Query: %w", err)
+	}
+	defer rows.Close()
+
+	tenants := make([]entity.User, 0)
+	for rows.Next() {
+		var u entity.User
+		if err := rows.Scan(
+			&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.Role, &u.Document, &u.Phone, &u.PaymentCard,
+		); err != nil {
+			return nil, fmt.Errorf("UserRepo - GetUnlinkedTenants - rows.Scan: %w", err)
+		}
+		tenants = append(tenants, u)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("UserRepo - GetUnlinkedTenants - rows.Err: %w", err)
+	}
+
+	return tenants, nil
+}

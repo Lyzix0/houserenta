@@ -94,6 +94,43 @@ func (r *PropertyRepo) GetByLandlordID(ctx context.Context, landlordID string) (
 	return properties, nil
 }
 
+// GetVacant returns every property that currently has no lease bound to it.
+func (r *PropertyRepo) GetVacant(ctx context.Context) ([]entity.Property, error) {
+	sql, args, err := r.Builder.
+		Select(propertyColumns...).
+		From("app.properties").
+		Where("id NOT IN (SELECT property_id FROM app.leases)").
+		ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("PropertyRepo - GetVacant - r.Builder: %w", err)
+	}
+
+	rows, err := r.Pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("PropertyRepo - GetVacant - r.Pool.Query: %w", err)
+	}
+	defer rows.Close()
+
+	properties := make([]entity.Property, 0)
+	for rows.Next() {
+		var prop entity.Property
+		if err := rows.Scan(
+			&prop.ID, &prop.LandlordID, &prop.Name, &prop.Coordinates, &prop.Country,
+			&prop.Region, &prop.City, &prop.Street, &prop.House, &prop.Apartment,
+			&prop.GvsTariff, &prop.HvsTariff, &prop.El1Tariff, &prop.El2Tariff, &prop.Balance,
+		); err != nil {
+			return nil, fmt.Errorf("PropertyRepo - GetVacant - rows.Scan: %w", err)
+		}
+		properties = append(properties, prop)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("PropertyRepo - GetVacant - rows.Err: %w", err)
+	}
+
+	return properties, nil
+}
+
 func (r *PropertyRepo) GetByID(ctx context.Context, id string) (entity.Property, error) {
 	sql, args, err := r.Builder.
 		Select(propertyColumns...).

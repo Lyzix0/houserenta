@@ -16,4 +16,6 @@ var (
 
 	ErrBillNotFound    = errors.New("bill not found")
 	ErrReadingNotFound = errors.New("reading not found")
+
+	ErrApplicationAlreadyExists = errors.New("application already exists")
 )

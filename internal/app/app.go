@@ -27,10 +27,11 @@ func initUseCases(pg *postgres.Postgres) useCases {
 	readingRepo := persistent.NewReadingRepo(pg)
 	billRepo := persistent.NewBillRepo(pg)
 	customNextItemRepo := persistent.NewCustomNextItemRepo(pg)
+	applicationRepo := persistent.NewApplicationRepo(pg)
 
 	return useCases{
 		user:     user.New(userRepo, leaseRepo),
-		property: property.New(propertyRepo, leaseRepo, readingRepo, billRepo, customNextItemRepo, userRepo),
+		property: property.New(propertyRepo, leaseRepo, readingRepo, billRepo, customNextItemRepo, userRepo, applicationRepo),
 		billing:  billing.New(leaseRepo, propertyRepo, billRepo, readingRepo, customNextItemRepo),
 	}
 }
