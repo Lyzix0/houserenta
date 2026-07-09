@@ -42,6 +42,31 @@ func TestCreateReading(t *testing.T) {
 		}
 	})
 
+	t.Run("value too large is rejected before reaching the usecase", func(t *testing.T) {
+		app := newTestApp(&userUseCaseMock{
+			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
+				return entity.User{ID: "tenant-1", Email: email, Role: entity.RoleTenant}, nil
+			},
+		}, &propertyUseCaseMock{
+			createReadingFn: func(context.Context, string, string, entity.Role, request.Reading) error {
+				t.Fatal("usecase should not be called: oversized reading must be rejected by validation")
+				return nil
+			},
+		})
+
+		cookie := loginAndGetCookie(t, app)
+
+		oversized := validBody
+		oversized.Gvs = 1e9
+
+		resp := doRequest(t, app, http.MethodPost, "/v1/properties/prop-1/readings", oversized, cookie)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusBadRequest)
+		}
+	})
+
 	t.Run("success as tenant", func(t *testing.T) {
 		app := newTestApp(&userUseCaseMock{
 			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
@@ -140,6 +165,28 @@ func TestPay(t *testing.T) {
 		cookie := loginAndGetCookie(t, app)
 
 		resp := doRequest(t, app, http.MethodPost, "/v1/properties/prop-1/pay", map[string]any{"amount": 0}, cookie)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("amount too large is rejected before reaching the usecase", func(t *testing.T) {
+		app := newTestApp(&userUseCaseMock{
+			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
+				return entity.User{ID: "tenant-1", Email: email, Role: entity.RoleTenant}, nil
+			},
+		}, &propertyUseCaseMock{
+			payFn: func(context.Context, string, string, entity.Role, request.Payment) error {
+				t.Fatal("usecase should not be called: oversized amount must be rejected by validation")
+				return nil
+			},
+		})
+
+		cookie := loginAndGetCookie(t, app)
+
+		resp := doRequest(t, app, http.MethodPost, "/v1/properties/prop-1/pay", request.Payment{Amount: 1e9}, cookie)
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusBadRequest {
@@ -301,6 +348,31 @@ func TestCreateCustomItem(t *testing.T) {
 		cookie := loginAndGetCookie(t, app)
 
 		resp := doRequest(t, app, http.MethodPost, "/v1/properties/prop-1/custom-item", map[string]string{"description": ""}, cookie)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusBadRequest)
+		}
+	})
+
+	t.Run("amount too large is rejected before reaching the usecase", func(t *testing.T) {
+		app := newTestApp(&userUseCaseMock{
+			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
+				return entity.User{ID: "landlord-1", Email: email, Role: entity.RoleLandlord}, nil
+			},
+		}, &propertyUseCaseMock{
+			createCustomItemFn: func(context.Context, string, string, request.CustomItem) error {
+				t.Fatal("usecase should not be called: oversized amount must be rejected by validation")
+				return nil
+			},
+		})
+
+		cookie := loginAndGetCookie(t, app)
+
+		oversized := validBody
+		oversized.Amount = 1e9
+
+		resp := doRequest(t, app, http.MethodPost, "/v1/properties/prop-1/custom-item", oversized, cookie)
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusBadRequest {

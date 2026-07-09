@@ -77,6 +77,19 @@ func TestCreateProperty(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 		},
 		{
+			name: "tariff too large",
+			body: func() request.Property {
+				body := validBody
+				body.GvsTariff = 1e9
+				return body
+			}(),
+			createPropertyFn: func(context.Context, string, request.Property) (entity.Property, error) {
+				t.Fatal("usecase should not be called: oversized tariff must be rejected by validation")
+				return entity.Property{}, nil
+			},
+			wantStatus: http.StatusBadRequest,
+		},
+		{
 			name: "landlord not found",
 			body: validBody,
 			createPropertyFn: func(context.Context, string, request.Property) (entity.Property, error) {

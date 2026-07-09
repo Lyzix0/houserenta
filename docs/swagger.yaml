@@ -271,9 +271,11 @@ definitions:
     properties:
       amount:
         example: 2500
+        maximum: 100000000
         type: number
       description:
         example: Замена смесителя на кухне
+        maxLength: 500
         type: string
     required:
     - amount
@@ -283,6 +285,7 @@ definitions:
     properties:
       monthsOfRent:
         example: 11
+        maximum: 1200
         type: integer
       paymentDay:
         example: 10
@@ -291,6 +294,7 @@ definitions:
         type: integer
       price:
         example: 32000
+        maximum: 100000000
         type: number
       readingDay:
         example: 28
@@ -299,6 +303,7 @@ definitions:
         type: integer
       tenantUserId:
         example: user-a9b8c7d
+        maxLength: 100
         type: string
     required:
     - monthsOfRent
@@ -311,9 +316,11 @@ definitions:
     properties:
       email:
         example: ivan.petrov@example.com
+        maxLength: 254
         type: string
       password:
         example: strongPass123
+        maxLength: 72
         type: string
     required:
     - email
@@ -323,9 +330,11 @@ definitions:
     properties:
       amount:
         example: 35000
+        maximum: 100000000
         type: number
       billId:
         example: bill-999
+        maxLength: 100
         type: string
     required:
     - amount
@@ -334,9 +343,11 @@ definitions:
     properties:
       document:
         example: 4510 123456
+        maxLength: 200
         type: string
       email:
         example: newemail@example.com
+        maxLength: 254
         type: string
       name:
         example: Ivan Kolesnikov
@@ -345,6 +356,7 @@ definitions:
         type: string
       password:
         example: newSuperSecurePassword
+        maxLength: 72
         minLength: 6
         type: string
       paymentCard:
@@ -352,45 +364,58 @@ definitions:
         type: string
       phone:
         example: "+79997776655"
+        maxLength: 20
         type: string
     type: object
   request.Property:
     properties:
       apartment:
         example: "45"
+        maxLength: 20
         type: string
       city:
         example: Moscow
+        maxLength: 100
         type: string
       coordinates:
         example: 55.751244,37.618423
+        maxLength: 100
         type: string
       country:
         example: Russia
+        maxLength: 100
         type: string
       el1Tariff:
         example: 5.7
+        maximum: 100000
         type: number
       el2Tariff:
         example: 4.9
+        maximum: 100000
         type: number
       gvsTariff:
         example: 189.5
+        maximum: 100000
         type: number
       house:
         example: "12"
+        maxLength: 20
         type: string
       hvsTariff:
         example: 45.2
+        maximum: 100000
         type: number
       name:
         example: Sunny Apartment
+        maxLength: 200
         type: string
       region:
         example: Moscow
+        maxLength: 100
         type: string
       street:
         example: Tverskaya
+        maxLength: 200
         type: string
     required:
     - apartment
@@ -408,15 +433,19 @@ definitions:
     properties:
       el1:
         example: 395.5
+        maximum: 10000000
         type: number
       el2:
         example: 110.2
+        maximum: 10000000
         type: number
       gvs:
         example: 15.2
+        maximum: 10000000
         type: number
       hvs:
         example: 29.8
+        maximum: 10000000
         type: number
     required:
     - el1
@@ -427,9 +456,11 @@ definitions:
     properties:
       document:
         example: 4510 123456
+        maxLength: 200
         type: string
       email:
         example: ivan.petrov@example.com
+        maxLength: 254
         type: string
       initialRole:
         enum:
@@ -444,6 +475,7 @@ definitions:
         type: string
       password:
         example: strongPass123
+        maxLength: 72
         minLength: 6
         type: string
       paymentCard:
@@ -451,6 +483,7 @@ definitions:
         type: string
       phone:
         example: "+79161234567"
+        maxLength: 20
         type: string
     required:
     - email
