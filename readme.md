@@ -34,8 +34,25 @@ go run cmd/app/main.go
 ### Запуск через Docker
 
 ```bash
-make app-deploy       # docker compose up -d --build renta-app
+make app-deploy       # docker compose up -d --build renta-app frontend caddy
 ```
+
+Поднимает весь стек: `renta-app` (backend, порт `5050` внутри, `5000` наружу), `frontend` (Next.js, порт `3000`), и `caddy` — reverse-proxy с автоматическим HTTPS (Let's Encrypt) на `80`/`443`.
+
+### Деплой на домене
+
+1. A-запись домена → публичный IP сервера. Порты `80` и `443` должны быть открыты снаружи (Caddy сам получает сертификат Let's Encrypt при первом запросе на домен).
+2. В [`Caddyfile`](Caddyfile) заменить домен на свой.
+3. В `.env` выставить под тот же домен:
+   ```
+   ALLOWED_ORIGINS=https://<домен>
+   NEXT_PUBLIC_API_BASE_URL=https://<домен>/v1
+   ```
+4. `make app-deploy`.
+
+Сертификаты Caddy хранятся в docker-volume `caddy_data` — **не удалять** его при пересборке, иначе Let's Encrypt быстро упрётся в rate limit на повторные выпуски для одного домена.
+
+Сессионная кука бэкенда помечена `Secure` — она устанавливается и отправляется только по HTTPS. Прямой заход по `http://<IP>:3000`/`:5000` (мимо Caddy) перестаёт сохранять сессию в браузере; тестировать логин нужно через домен.
 
 ### Тесты
 
