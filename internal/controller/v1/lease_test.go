@@ -65,6 +65,31 @@ func TestCreateLease(t *testing.T) {
 		}
 	})
 
+	t.Run("price too large is rejected before reaching the usecase", func(t *testing.T) {
+		app := newTestApp(&userUseCaseMock{
+			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {
+				return entity.User{ID: "landlord-1", Email: email, Role: entity.RoleLandlord}, nil
+			},
+		}, &propertyUseCaseMock{
+			createLeaseFn: func(context.Context, string, string, request.Lease) error {
+				t.Fatal("usecase should not be called: oversized price must be rejected by validation")
+				return nil
+			},
+		})
+
+		cookie := loginAndGetCookie(t, app)
+
+		oversized := validBody
+		oversized.Price = 1e9
+
+		resp := doRequest(t, app, http.MethodPost, "/v1/properties/prop-1/lease", oversized, cookie)
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusBadRequest)
+		}
+	})
+
 	t.Run("success", func(t *testing.T) {
 		app := newTestApp(&userUseCaseMock{
 			loginFn: func(_ context.Context, email, _ string) (entity.User, error) {

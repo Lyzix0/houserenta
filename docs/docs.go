@@ -1376,10 +1376,12 @@ const docTemplate = `{
             "properties": {
                 "amount": {
                     "type": "number",
+                    "maximum": 100000000,
                     "example": 2500
                 },
                 "description": {
                     "type": "string",
+                    "maxLength": 500,
                     "example": "Замена смесителя на кухне"
                 }
             }
@@ -1396,6 +1398,7 @@ const docTemplate = `{
             "properties": {
                 "monthsOfRent": {
                     "type": "integer",
+                    "maximum": 1200,
                     "example": 11
                 },
                 "paymentDay": {
@@ -1406,6 +1409,7 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "number",
+                    "maximum": 100000000,
                     "example": 32000
                 },
                 "readingDay": {
@@ -1416,6 +1420,7 @@ const docTemplate = `{
                 },
                 "tenantUserId": {
                     "type": "string",
+                    "maxLength": 100,
                     "example": "user-a9b8c7d"
                 }
             }
@@ -1429,10 +1434,12 @@ const docTemplate = `{
             "properties": {
                 "email": {
                     "type": "string",
+                    "maxLength": 254,
                     "example": "ivan.petrov@example.com"
                 },
                 "password": {
                     "type": "string",
+                    "maxLength": 72,
                     "example": "strongPass123"
                 }
             }
@@ -1445,10 +1452,12 @@ const docTemplate = `{
             "properties": {
                 "amount": {
                     "type": "number",
+                    "maximum": 100000000,
                     "example": 35000
                 },
                 "billId": {
                     "type": "string",
+                    "maxLength": 100,
                     "example": "bill-999"
                 }
             }
@@ -1458,10 +1467,12 @@ const docTemplate = `{
             "properties": {
                 "document": {
                     "type": "string",
+                    "maxLength": 200,
                     "example": "4510 123456"
                 },
                 "email": {
                     "type": "string",
+                    "maxLength": 254,
                     "example": "newemail@example.com"
                 },
                 "name": {
@@ -1472,6 +1483,7 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string",
+                    "maxLength": 72,
                     "minLength": 6,
                     "example": "newSuperSecurePassword"
                 },
@@ -1481,6 +1493,7 @@ const docTemplate = `{
                 },
                 "phone": {
                     "type": "string",
+                    "maxLength": 20,
                     "example": "+79997776655"
                 }
             }
@@ -1502,50 +1515,62 @@ const docTemplate = `{
             "properties": {
                 "apartment": {
                     "type": "string",
+                    "maxLength": 20,
                     "example": "45"
                 },
                 "city": {
                     "type": "string",
+                    "maxLength": 100,
                     "example": "Moscow"
                 },
                 "coordinates": {
                     "type": "string",
+                    "maxLength": 100,
                     "example": "55.751244,37.618423"
                 },
                 "country": {
                     "type": "string",
+                    "maxLength": 100,
                     "example": "Russia"
                 },
                 "el1Tariff": {
                     "type": "number",
+                    "maximum": 100000,
                     "example": 5.7
                 },
                 "el2Tariff": {
                     "type": "number",
+                    "maximum": 100000,
                     "example": 4.9
                 },
                 "gvsTariff": {
                     "type": "number",
+                    "maximum": 100000,
                     "example": 189.5
                 },
                 "house": {
                     "type": "string",
+                    "maxLength": 20,
                     "example": "12"
                 },
                 "hvsTariff": {
                     "type": "number",
+                    "maximum": 100000,
                     "example": 45.2
                 },
                 "name": {
                     "type": "string",
+                    "maxLength": 200,
                     "example": "Sunny Apartment"
                 },
                 "region": {
                     "type": "string",
+                    "maxLength": 100,
                     "example": "Moscow"
                 },
                 "street": {
                     "type": "string",
+                    "maxLength": 200,
                     "example": "Tverskaya"
                 }
             }
@@ -1560,18 +1585,22 @@ const docTemplate = `{
             "properties": {
                 "el1": {
                     "type": "number",
+                    "maximum": 10000000,
                     "example": 395.5
                 },
                 "el2": {
                     "type": "number",
+                    "maximum": 10000000,
                     "example": 110.2
                 },
                 "gvs": {
                     "type": "number",
+                    "maximum": 10000000,
                     "example": 15.2
                 },
                 "hvs": {
                     "type": "number",
+                    "maximum": 10000000,
                     "example": 29.8
                 }
             }
@@ -1588,10 +1617,12 @@ const docTemplate = `{
             "properties": {
                 "document": {
                     "type": "string",
+                    "maxLength": 200,
                     "example": "4510 123456"
                 },
                 "email": {
                     "type": "string",
+                    "maxLength": 254,
                     "example": "ivan.petrov@example.com"
                 },
                 "initialRole": {
@@ -1610,6 +1641,7 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string",
+                    "maxLength": 72,
                     "minLength": 6,
                     "example": "strongPass123"
                 },
@@ -1619,6 +1651,7 @@ const docTemplate = `{
                 },
                 "phone": {
                     "type": "string",
+                    "maxLength": 20,
                     "example": "+79161234567"
                 }
             }
