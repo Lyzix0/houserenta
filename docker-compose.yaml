@@ -6,7 +6,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ${PROJECT_ROOT}/Caddyfile:/etc/caddy/Caddyfile
+      - ${PROJECT_ROOT}/Caddyfile:/etc/caddy/Caddyfile:ro,Z
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -45,11 +45,15 @@ services:
       dockerfile: ${PROJECT_ROOT}/frontend/Dockerfile
       args:
         - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:5000/v1}
+        # Same value as in `environment:` below — next.config.ts's rewrites() is
+        # baked into the build at `next build` time, so this must be set here too,
+        # not just at container runtime.
+        - API_INTERNAL_BASE_URL=${API_INTERNAL_BASE_URL:-http://renta-app:5050/v1}
     container_name: frontend
     environment:
       # Internal docker-network address: used only by the Next.js server for the
       # /api/v1/* rewrite proxy, never sent to the browser.
-      - API_INTERNAL_BASE_URL=http://renta-app:5050/v1
+      - API_INTERNAL_BASE_URL=${API_INTERNAL_BASE_URL:-http://renta-app:5050/v1}
     depends_on:
       - renta-app
     ports:

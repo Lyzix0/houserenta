@@ -17,6 +17,12 @@ COPY . .
 # browser can reach (not the internal docker-compose service name).
 ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+# next.config.ts's rewrites() is evaluated once during `next build` and baked
+# into .next/routes-manifest.json — `next start` just replays it, so setting
+# this only at container runtime (via docker-compose `environment:`) has no
+# effect. It must also be present here, at build time.
+ARG API_INTERNAL_BASE_URL
+ENV API_INTERNAL_BASE_URL=${API_INTERNAL_BASE_URL}
 RUN pnpm build
 
 FROM base AS runner

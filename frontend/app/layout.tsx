@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -21,16 +20,6 @@ const sfProDisplay = localFont({
   variable: "--font-sans",
 });
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
   title: "Rent",
   description: "",
@@ -45,7 +34,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("h-full", "antialiased", sfProDisplay.variable, geistSans.variable, geistMono.variable, "font-sans")}
+      className={cn("h-full", "antialiased", sfProDisplay.variable, "font-sans")}
     >
       <body className="min-h-full flex flex-col">
         <Providers>
