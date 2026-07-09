@@ -1,4 +1,19 @@
 services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${PROJECT_ROOT}/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - renta-app
+    restart: always
+
   renta-app:
     build:
       context: ${PROJECT_ROOT}
@@ -22,6 +37,23 @@ services:
       - ${PROJECT_ROOT}/out/logs:/app/out/logs:Z
     ports:
       - "5000:5050"
+    restart: always
+
+  frontend:
+    build:
+      context: ${PROJECT_ROOT}/frontend
+      dockerfile: ${PROJECT_ROOT}/frontend/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:5000/v1}
+    container_name: frontend
+    environment:
+      # Internal docker-network address: used only by the Next.js server for the
+      # /api/v1/* rewrite proxy, never sent to the browser.
+      - API_INTERNAL_BASE_URL=http://renta-app:5050/v1
+    depends_on:
+      - renta-app
+    ports:
+      - "3000:3000"
     restart: always
 
   renta-app-postgres:
@@ -55,3 +87,7 @@ services:
         ENTRYPOINT ["swag"]
     volumes:
       - ${PROJECT_ROOT}:/code
+
+volumes:
+  caddy_data:
+  caddy_config:

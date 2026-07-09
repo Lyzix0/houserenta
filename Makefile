@@ -58,7 +58,7 @@ logs-cleanup:
 	echo "Logs were cleaned!";
 
 app-deploy:
-	@docker compose up -d --build renta-app
+	@docker compose up -d --build renta-app frontend caddy
 
 swagger-gen:
 	@swag init -g cmd/app/main.go -o docs

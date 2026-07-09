@@ -1,0 +1,9 @@
+myrent.cement.lol {
+	# Raw backend access — API and swagger, path kept as-is (no prefix stripping).
+	reverse_proxy /v1/* renta-app:5050
+	reverse_proxy /swagger/* renta-app:5050
+
+	# Everything else goes to the frontend, which proxies /api/v1/* to the backend
+	# internally (see frontend/next.config.ts) — this one route covers the whole app.
+	reverse_proxy frontend:3000
+}

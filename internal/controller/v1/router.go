@@ -20,6 +20,10 @@ func NewRoutes(
 		IdleTimeout:    24 * time.Hour,
 		CookieHTTPOnly: true,
 		CookieSameSite: "Lax",
+		// The public entry point is now Caddy terminating HTTPS on the real domain;
+		// browsers refuse to send a Secure cookie back over a plain-HTTP origin, so
+		// local testing must go through the domain (or drop this when testing bare HTTP).
+		CookieSecure: true,
 	})
 
 	r := &V1{
